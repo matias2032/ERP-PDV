@@ -30,7 +30,7 @@ if "%OPCAO%"=="2" (
     echo.
     echo [INFO] Iniciando Flutter Windows (CLOUD - Render)...
     cd "C:\pdv-stech engenharia\frontend\pdv_stech"
-    start "FLUTTER WINDOWS (CLOUD)" cmd /k "flutter run -d windows -v --dart-define=API_BASE_URL=https://stech-pdv.onrender.com --dart-define=FORCE_PROD=true"
+    start "FLUTTER WINDOWS (CLOUD)" cmd /k "flutter run -d windows -v --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com --dart-define=FORCE_PROD=true"
     goto FIM
 )
 
@@ -54,7 +54,7 @@ if "%OPCAO%"=="4" (
     echo.
     echo [INFO] Iniciando Flutter Android (CLOUD - Render)...
     cd "C:\pdv-stech engenharia\frontend\pdv_stech"
-    start "FLUTTER ANDROID (CLOUD)" cmd /k "flutter run --dart-define=API_BASE_URL=https://stech-pdv.onrender.com --dart-define=FORCE_PROD=true"
+    start "FLUTTER ANDROID (CLOUD)" cmd /k "flutter run --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com --dart-define=FORCE_PROD=true"
     goto FIM
 )
 

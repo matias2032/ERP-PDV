@@ -5,7 +5,7 @@ class ApiConfig {
 
 static const String _baseUrlFromEnv = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://api-pdv.162.35.186.240.sslip.io',
+    defaultValue: 'https://erp-and-pdv.onrender.com',
   );
 
   static String? _baseUrlCache;

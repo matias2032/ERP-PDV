@@ -15,7 +15,7 @@ echo.
 
 cd /d "C:\pdv-stech engenharia\frontend\pdv_stech"
 
-flutter run -d windows -v --no-pub --dart-define=API_BASE_URL=http://api-pdv.162.35.186.240.sslip.io
+flutter run -d windows -v --no-pub --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com
 
 echo.
 echo ========================================
