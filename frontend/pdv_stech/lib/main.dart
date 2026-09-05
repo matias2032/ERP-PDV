@@ -1,12 +1,15 @@
 // frontend/lib/main.dart
 
 import 'app_imports.dart';
+import 'package:flutter/foundation.dart'; // ← Adicionado para fornecer a constante kIsWeb
+import 'dart:io' show Platform; // ← Adicionado para acesso seguro às verificações de plataforma
 import 'package:http/http.dart' as http;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+// ── Inicialização condicional do SQLite (Apenas fora da Web) ───────
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }

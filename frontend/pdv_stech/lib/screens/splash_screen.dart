@@ -13,9 +13,9 @@ import 'package:api_compartilhado/core/database/daos/cliente_dao.dart';
 import 'package:flutter/foundation.dart'; // para kDebugMode
 
 // ── Paleta STech ─────────────────────────────────────────────────────
-const _navy   = Color(0xFF1B2A6B);
-const _red    = Color(0xFFC8102E);
-const _bg     = Color(0xFFF4F5F7);
+const _navy   = Color.fromARGB(255, 58, 62, 79);
+const _red    = Color.fromARGB(255, 200, 16, 46);
+const _bg     = Color.fromARGB(255, 244, 245, 247);
 
 // ── Configuração ─────────────────────────────────────────────────────
 const _kHealthTimeout  = Duration(seconds: 8);
@@ -563,12 +563,12 @@ try {
         child: Column(
           children: [
             const Text(
-              'Gestor STech',
+              'ERP & PDV',
               style: TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                color: _navy,
+                color: Color.fromARGB(255, 58, 62, 79),
                 letterSpacing: .4,
               ),
             ),
@@ -577,7 +577,7 @@ try {
               'Sistema de Gestão de Pedidos',
               style: TextStyle(
                 fontSize: 13,
-                color: _navy.withOpacity(.5),
+                color: const Color.fromARGB(255, 58, 62, 79).withOpacity(.5),
                 letterSpacing: .5,
               ),
             ),
@@ -673,13 +673,15 @@ try {
     return _buildProgressArea();
   }
 
+
+
   Widget _buildProgressArea() {
     return Column(
       children: [
         Container(
           height: 4,
           decoration: BoxDecoration(
-            color: _navy.withOpacity(.10),
+            color: const Color.fromARGB(255, 58, 62, 79).withOpacity(.10),
             borderRadius: BorderRadius.circular(4),
           ),
           child: LayoutBuilder(
@@ -870,7 +872,7 @@ try {
 
   Widget _buildFooter() {
     return Text(
-      'STech Engenharia © ${DateTime.now().year}',
+      'ERP & PDV © ${DateTime.now().year}',
       style: TextStyle(
           fontSize: 11,
           color: _navy.withOpacity(.3),

@@ -10,9 +10,9 @@ import 'package:api_compartilhado/core/database/daos/usuario_dao.dart'; // ← N
 // ──────────────────────────────────────────────
 // Paleta STech
 // ──────────────────────────────────────────────
-const _navy   = Color(0xFF1B2A6B);
-const _red    = Color(0xFFC8102E);
-const _bg     = Color(0xFFF4F5F7);
+const _navy   = Color.fromARGB(255, 58, 62, 79);
+const _red    = Color.fromARGB(255, 200, 16, 46);
+const _bg     = Color.fromARGB(255, 244, 245, 247);
 const _border = Color(0xFFE2E5ED);
 
 class LoginScreen extends StatefulWidget {
@@ -247,7 +247,7 @@ Container(
 const SizedBox(height: 20),
 
           const Text(
-            'Gestor STech',
+            'ERP & PDV STech',
             style: TextStyle(
               fontFamily: 'Georgia',
               fontSize: 22,

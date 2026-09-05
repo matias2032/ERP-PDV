@@ -1,25 +1,37 @@
-
 @echo off
-title STech PDV  Flutter Launcher
-
-@REM gorilla2
+title STech PDV - Launcher
+cls
 
 echo ========================================
-echo   STech PDV  Flutter Desktop
+echo        STech PDV - Flutter Launcher
 echo ========================================
-
-echo.
-echo [INFO] A iniciar Flutter Windows apontando para Coolify VPS...
-echo [INFO] Backend: 
 echo.
 
 cd /d "C:\pdv-stech engenharia\frontend\pdv_stech"
 
-flutter run -d windows -v --no-pub --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com
+echo [1] Executar em Modo Web (Chrome)
+echo [2] Executar em Modo Windows
+echo.
+set /p op=Selecione a opcao desejada (1 ou 2): 
+
+if "%op%"=="1" (
+    echo.
+    echo [INFO] A iniciar Flutter Web (Chrome)...
+    echo.
+    flutter run -d chrome --no-pub --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com
+) else if "%op%"=="2" (
+    echo.
+    echo [INFO] A iniciar Flutter Windows...
+    echo.
+    flutter run -d windows -v --no-pub --dart-define=API_BASE_URL=https://erp-and-pdv.onrender.com
+) else (
+    echo.
+    echo [ERRO] Opcao invalida!
+)
 
 echo.
 echo ========================================
-echo   Flutter encerrando...
+echo    Flutter encerrando...
 echo ========================================
 
 pause
