@@ -198,14 +198,14 @@ _emissorCliente(cotacao, cliente: cliente),
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    'COTAÇÃO',
-                    style: pw.TextStyle(
-                      fontSize: 26,
-                      fontWeight: pw.FontWeight.bold,
-                      color: _kAzul,
-                    ),
-                    textAlign: pw.TextAlign.right,
-                  ),
+  'FACT-PROFORMA',
+  style: pw.TextStyle(
+    fontSize: 22,
+    fontWeight: pw.FontWeight.bold,
+    color: _kAzul,
+  ),
+  textAlign: pw.TextAlign.right,
+),
                 ],
               ),
             ),
@@ -299,14 +299,14 @@ pw.Widget _emissorCliente(CotacaoModel cotacao, {ClienteModel? cliente}) {
             ],
           ),
         ),
-        pw.Text(
-          'Cotação Nº ${cotacao.referencia}',
-          style: pw.TextStyle(
-            fontSize: 8,
-            fontWeight: pw.FontWeight.bold,
-            color: _kVermelho,
-          ),
-        ),
+pw.Text(
+  'Factura Proforma Nº-${_referenciaExibicao(cotacao.referencia)}',
+  style: pw.TextStyle(
+    fontSize: 8,
+    fontWeight: pw.FontWeight.bold,
+    color: _kVermelho,
+  ),
+),
       ],
     );
   }
@@ -566,7 +566,11 @@ pw.Widget _emissorCliente(CotacaoModel cotacao, {ClienteModel? cliente}) {
   }
 
 
-  String _nomeClienteCotacao(CotacaoModel c) {
+String _referenciaExibicao(String referencia) {
+  return referencia.replaceFirst('COT-', '');
+}
+
+String _nomeClienteCotacao(CotacaoModel c) {
   if (c.nomeCliente != null && c.nomeCliente!.trim().isNotEmpty) {
     return c.nomeCliente!.trim();
   }
@@ -685,10 +689,10 @@ bool _cotacaoEhSingular(CotacaoModel c) {
   // NOMENCLATURA DE FICHEIROS
   // ═════════════════════════════════════════════════════════════════
 
-  String _nomeArquivo(CotacaoModel cotacao) {
-    final safeRef = cotacao.referencia.replaceAll('/', '-');
-    return 'COT-$safeRef';
-  }
+String _nomeArquivo(CotacaoModel cotacao) {
+  final safeRef = cotacao.referencia.replaceAll('/', '-');
+  return 'FACT-PROFORMA-$safeRef';
+}
 
   // ═════════════════════════════════════════════════════════════════
   // GUARDAR PDF EM DISCO

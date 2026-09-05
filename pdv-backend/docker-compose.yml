@@ -6,77 +6,38 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 8wLLlyI3kO3O6iDuDrrJrMmTxyrtbs4N3nEXBmUw2n18RelSER9BCXuphpYt0O4Y
+      POSTGRES_PASSWORD: dev_local_pw
       POSTGRES_DB: stech_db2
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - stech-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d stech_db2"]
       interval: 5s
       timeout: 5s
       retries: 5
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/stech_db2
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 8wLLlyI3kO3O6iDuDrrJrMmTxyrtbs4N3nEXBmUw2n18RelSER9BCXuphpYt0O4Y
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      SPRING_DATASOURCE_PASSWORD: dev_local_pw
+      PORT: 8080
+    ports:
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - stech-net
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
-      - "traefik.http.routers.app-direct.rule=Host(`api-pdv.162.35.186.240.sslip.io`)"
-      - "traefik.http.routers.app-direct.entrypoints=http"
-      - "traefik.http.routers.app-direct.priority=10000"
-      - "traefik.http.services.app-direct.loadbalancer.server.port=8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || wget --spider -q http://localhost:8080/api/produtos || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   adminer:
     image: adminer:latest
     restart: unless-stopped
     ports:
       - "8088:8080"
-    networks:
-      - stech-net
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
 
 volumes:
   pgdata:
-
-networks:
-  stech-net:
-    driver: bridge
-  coolify:
-    external: true
