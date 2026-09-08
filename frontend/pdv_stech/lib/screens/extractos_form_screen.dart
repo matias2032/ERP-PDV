@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 
-const _kAzul       = Color(0xFF1B2A6B);
+const _kAzul       = Color.fromARGB(255, 58, 62, 79);
 const _kVermelho   = Color(0xFFC8102E);
 const _kBranco     = Colors.white;
 const _kCinzaClaro = Color(0xFFF4F5F7);

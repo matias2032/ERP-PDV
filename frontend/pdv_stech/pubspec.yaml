@@ -1,5 +1,5 @@
-name: pdv_stech
-description: "A new Flutter project."
+name: erp_pdv
+description: "ERP & PDV - Sistema de Gestão Empresarial e Ponto de Venda"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -16,7 +16,6 @@ dependencies:
   image_picker: ^1.0.7
   sqflite_common_ffi: ^2.3.4
 
-  # CORRIGIDO: Subindo dois níveis para encontrar a pasta na raiz
   api_compartilhado:
     path: ../../api_compartilhado
 
@@ -25,12 +24,13 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.1 
+  flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon/app_icon.png"
+
   windows:
     generate: true
     image_path: "assets/icon/app_icon.ico"

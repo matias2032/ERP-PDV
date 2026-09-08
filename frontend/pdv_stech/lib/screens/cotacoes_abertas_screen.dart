@@ -10,7 +10,7 @@ import 'cotacao_resumo_screen.dart';
 
 // import 'finalizar_pedido.dart';
 
-const _kPrimary    = Color(0xFF1B2A6B);
+const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
 const _kAccent     = Color(0xFFC8102E);
 const _kBackground = Color(0xFFF4F5F7);
 const _kCotacao    = Color(0xFF0077B6);

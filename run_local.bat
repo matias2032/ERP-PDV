@@ -7,7 +7,7 @@ echo        STech PDV - Flutter Launcher
 echo ========================================
 echo.
 
-cd /d "C:\pdv-stech engenharia\frontend\pdv_stech"
+cd /d "C:\ERP & PDV\frontend\pdv_stech"
 
 echo [1] Executar em Modo Web (Chrome)
 echo [2] Executar em Modo Windows

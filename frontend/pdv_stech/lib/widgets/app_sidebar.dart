@@ -6,7 +6,7 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'dart:io';
 
 const _kVermelho  = Color(0xFFC8102E);
-const _kAzul      = Color(0xFF1B2A6B);
+const _kAzul      = Color(0xFF3A3E4F);
 const _kBranco    = Colors.white;
 const _kCinzaTexto = Color(0xFF6B7280);
 
@@ -430,7 +430,7 @@ Widget _buildHeader(usuario) {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF1B2A6B), Color(0xFF11183E)],
+        colors: [Color(0xFF3A3E4F), Color.fromARGB(255, 18, 19, 24)],
       ),
     ),
     child: Column(

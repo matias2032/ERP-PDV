@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'finalizar_pedido.dart';
 import 'devolucao_troca_screen.dart';
 // ─── Paleta (igual a detalhes_produto.dart) ───────────────────────────────────
-const _kPrimary = Color(0xFF1B2A6B);
+const _kPrimary = Color.fromARGB(255, 58, 62, 79);
 const _kAccent = Color(0xFFC8102E);
 const _kBackground = Color(0xFFF4F5F7);
 

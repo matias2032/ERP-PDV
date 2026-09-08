@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 
-const _kPrimary    = Color.fromARGB(255, 27, 42, 107);
+const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
 const _kAccent     = Color.fromARGB(255, 200, 16, 46);
 const _kBackground = Color(0xFFF4F5F7);
 const _kCardBg     = Colors.white;

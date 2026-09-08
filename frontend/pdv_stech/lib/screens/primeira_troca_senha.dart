@@ -7,7 +7,7 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 // ──────────────────────────────────────────────
 // Paleta STech
 // ──────────────────────────────────────────────
-const _navy   = Color(0xFF1B2A6B);
+const _navy   = Color.fromARGB(255, 58, 62, 79);
 const _red    = Color(0xFFC8102E);
 const _bg     = Color(0xFFF4F5F7);
 const _border = Color(0xFFE2E5ED);
