@@ -13,11 +13,11 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 
 abstract final class _Empresa {
   static const nomeCompleto =
-      'Segurança Tecnologica SU, LDA (Stech Engenharia)';
+      'Segurança Tecnologica SU, LDA (Dev258)';
   static const bairro = 'Bairro: Chingodzi, Tete';
   static const telefone = 'Número: +258 84 239 0756 ou 87 939 0756';
-  static const email = 'Email: info@stech.co.mz';
-  static const website = 'Website: www.stecheng.co.mz';
+  static const email = 'Email: matiasmatavel1232@gmail.com';
+  static const website = 'Website: www.dev258.co.mz';
   static const nuit = 'NUIT: 401 684 530';
 
   static const List<_Banco> bancos = [
@@ -43,7 +43,7 @@ abstract final class _Empresa {
     'Garantia: Serviços com padrão técnico; equipamentos conforme fabricante. Não cobre mau uso.',
     'Alterações/Cancelamentos: Podem gerar custos adicionais.',
     'Responsabilidade do Cliente: Fornecer dados correctos e garantir acesso/condições ao local.',
-    'Responsabilidade: A Stech Engenharia não responde por danos indirectos ou externos ao serviço.',
+    'Responsabilidade: A Dev258 não responde por danos indirectos ou externos ao serviço.',
     'Aceitação: Aprovar o documento significa aceitar estes termos.',
   ];
 }
@@ -62,7 +62,7 @@ class _Banco {
 // CORES DA MARCA
 // ═══════════════════════════════════════════════════════════════════
 
-const _kAzul = PdfColor.fromInt(0xFF1B2A6B);
+const _kAzul = PdfColor.fromInt(0xFF3A3E4F);
 const _kVermelho = PdfColor.fromInt(0xFFC8102E);
 
 // ═══════════════════════════════════════════════════════════════════
@@ -141,11 +141,11 @@ Future<pw.Document> _buildCotacao(CotacaoModel cotacao, {ClienteModel? cliente})
     final iconBytes = await rootBundle.load('assets/icon/app_icon.png');
     final iconImage = pw.MemoryImage(iconBytes.buffer.asUint8List());
 
-    final pdf = pw.Document(
-      title: cotacao.referencia,
-      author: _Empresa.nomeCompleto,
-      creator: 'Sistema de Gestão Stech',
-    );
+final pdf = pw.Document(
+  title: cotacao.referencia,
+  author: _Empresa.nomeCompleto,
+  creator: 'Sistema de Gestão Dev258 ERP & PDV',
+);
 
     pdf.addPage(
       pw.MultiPage(
@@ -521,13 +521,13 @@ pw.Text(
           color: PdfColors.grey300,
           padding:
               const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
-          child: pw.Text(
-            'O pagamento pode ser feito por Cheque, Depósito ou Transferência Bancária'
-            ' — Titular: Stech Engenharia SU, Lda',
-            style:
-                pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-            textAlign: pw.TextAlign.center,
-          ),
+child: pw.Text(
+  'O pagamento pode ser feito por Cheque, Depósito ou Transferência Bancária'
+  ' — Titular: Segurança Tecnologica SU, Lda (Dev258)',
+  style:
+      pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+  textAlign: pw.TextAlign.center,
+),
         ),
         pw.Table(
           border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -605,8 +605,9 @@ bool _cotacaoEhSingular(CotacaoModel c) {
       width: double.infinity,
       padding: const pw.EdgeInsets.only(top: 4),
       alignment: pw.Alignment.center,
-      child: pw.Text(
-        'Documento processado por computador através do Sistema de Gestão Stech ERP.',
+child: pw.Text(
+  'Documento processado por computador através do Sistema de Gestão Dev258 ERP & PDV.',
+
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 7,
@@ -623,8 +624,8 @@ bool _cotacaoEhSingular(CotacaoModel c) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _t('Stech Engenharia (c) ${DateTime.now().year}',
-            size: 7, color: PdfColors.grey600),
+_t('Dev258 (c) ${DateTime.now().year}',
+    size: 7, color: PdfColors.grey600),
         _t('Página ${ctx.pageNumber} de ${ctx.pagesCount}',
             size: 7, color: PdfColors.grey600),
       ],

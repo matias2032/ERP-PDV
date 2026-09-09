@@ -6,7 +6,7 @@ tags:
 - git
 - pattern
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 filenames:
 - .refact/buddy/chats/workflows/buddy_docs_gardener.json
 - .refact/buddy/state.json
@@ -15,7 +15,7 @@ kind: pattern
 status: proposed
 superseded_by: null
 deprecated_at: null
-review_after: 2026-09-08
+review_after: 2026-09-09
 source_chat_id: null
 created_at: 2026-09-08T08:10:15.760275900+00:00
 summary: null
@@ -36,7 +36,8 @@ last_injected_at: null
 dismissed_count: 0
 source_content_hash: aec5e64b3e15609f594bfa2f865e23eca84220bb3c70c305bd801df39e245555
 review_needed: true
-occurrences: 0
+occurrences: 2
+last_observed: 2026-09-08T09:53:11.168318100+00:00
 ---
 
 Git co-change pattern: .refact/buddy/chats/workflows/buddy_docs_gardener.json + .refact/buddy/state.json

@@ -6,7 +6,7 @@ tags:
 - git
 - hotspot
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 filenames:
 - .refact/buddy/chats/workflows/buddy_idle_suggester.json
 links: []
@@ -14,7 +14,7 @@ kind: code
 status: proposed
 superseded_by: null
 deprecated_at: null
-review_after: 2026-09-08
+review_after: 2026-09-09
 source_chat_id: null
 created_at: 2026-09-08T08:10:16.236981500+00:00
 summary: null

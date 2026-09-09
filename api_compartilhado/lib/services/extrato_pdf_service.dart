@@ -11,7 +11,7 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 
 import '../models/extrato_model.dart';
 
-const _kAzul = PdfColor.fromInt(0xFF1B2A6B);
+const _kAzul = PdfColor.fromInt(0xFF3A3E4F);
 const _kVermelho = PdfColor.fromInt(0xFFC8102E);
 
 class ExtratoPdfService {
@@ -67,10 +67,10 @@ Future<File> gerar(ExtratoModel extrato) async {
     final iconBytes = await rootBundle.load('assets/icon/app_icon.png');
     final iconImage = pw.MemoryImage(iconBytes.buffer.asUint8List());
 
-    final doc = pw.Document(
-      title: 'Extracto ${extrato.labelPeriodo}',
-      author: 'Stech Engenharia',
-    );
+final doc = pw.Document(
+  title: 'Extracto ${extrato.labelPeriodo}',
+  author: 'Dev258',
+);
 
     doc.addPage(
       pw.MultiPage(
@@ -228,10 +228,10 @@ final linhasExtrato = <LinhaExtrato>[];
     final iconBytes = await rootBundle.load('assets/icon/app_icon.png');
     final iconImage = pw.MemoryImage(iconBytes.buffer.asUint8List());
 
-    final doc = pw.Document(
-      title: 'Extracto Documental - ${cliente.nomeCompleto}',
-      author: 'Stech Engenharia',
-    );
+final doc = pw.Document(
+  title: 'Extracto Documental - ${cliente.nomeCompleto}',
+  author: 'Dev258',
+);
 
     doc.addPage(
       pw.MultiPage(
@@ -280,7 +280,7 @@ final linhasExtrato = <LinhaExtrato>[];
 
     final doc = pw.Document(
       title: 'Historico Comercial - ${cliente.nomeCompleto}',
-      author: 'Stech Engenharia',
+      author: 'Dev258',
     );
 
     final linhasRaw = (extracto['linhas'] as List?) ?? const [];
@@ -379,14 +379,14 @@ final linhasExtrato = <LinhaExtrato>[];
                 ),
                 pw.SizedBox(height: 4),
                 _t(
-                  'Segurança Tecnologica SU, LDA (Stech Engenharia)',
+                  'Segurança Tecnologica SU, LDA (Dev258)',
                   bold: true,
                   size: 8.2,
                 ),
                 _t('Bairro: Chingodzi, Tete', size: 7.5),
                 _t('Numero: +258 84 239 0756 ou 87 939 0756', size: 7.5),
-                _t('Email: info@stech.co.mz', size: 7.5),
-                _t('Website: www.stecheng.co.mz', size: 7.5),
+                _t('Email: matiasmatavel1232@gmail.com', size: 7.5),
+                _t('Website: www.dev258.co.mz', size: 7.5),
                 _t('NUIT: 401 684 530', size: 7.5),
               ],
             ),
@@ -449,16 +449,16 @@ final linhasExtrato = <LinhaExtrato>[];
                   fit: pw.BoxFit.contain,
                 ),
                 pw.SizedBox(height: 4),
-                _t(
-                  'Segurança Tecnologica SU, LDA (Stech Engenharia)',
-                  bold: true,
-                  size: 8.2,
-                ),
-                _t('Bairro: Chingodzi, Tete', size: 7.5),
-                _t('Numero: +258 84 239 0756 ou 87 939 0756', size: 7.5),
-                _t('Email: info@stech.co.mz', size: 7.5),
-                _t('Website: www.stecheng.co.mz', size: 7.5),
-                _t('NUIT: 401 684 530', size: 7.5),
+_t(
+  'Segurança Tecnologica SU, LDA (Dev258)',
+  bold: true,
+  size: 8.2,
+),
+_t('Bairro: Chingodzi, Tete', size: 7.5),
+_t('Numero: +258 84 239 0756 ou 87 939 0756', size: 7.5),
+_t('Email: matiasmatavel1232@gmail.com', size: 7.5),
+_t('Website: www.dev258.co.mz', size: 7.5),
+_t('NUIT: 401 684 530', size: 7.5),
               ],
             ),
             pw.SizedBox(width: 18),
@@ -535,15 +535,15 @@ final linhasExtrato = <LinhaExtrato>[];
                 ),
                 pw.SizedBox(height: 4),
                 _t(
-                  'Segurança Tecnologica SU, LDA (Stech Engenharia)',
-                  bold: true,
-                  size: 8.2,
-                ),
-                _t('Bairro: Chingodzi, Tete', size: 7.5),
-                _t('Numero: +258 84 239 0756 ou 87 939 0756', size: 7.5),
-                _t('Email: info@stech.co.mz', size: 7.5),
-                _t('Website: www.stecheng.co.mz', size: 7.5),
-                _t('NUIT: 401 684 530', size: 7.5),
+  'Segurança Tecnologica SU, LDA (Dev258)',
+  bold: true,
+  size: 8.2,
+),
+_t('Bairro: Chingodzi, Tete', size: 7.5),
+_t('Numero: +258 84 239 0756 ou 87 939 0756', size: 7.5),
+_t('Email: matiasmatavel1232@gmail.com', size: 7.5),
+_t('Website: www.dev258.co.mz', size: 7.5),
+_t('NUIT: 401 684 530', size: 7.5),
               ],
             ),
             pw.SizedBox(width: 18),
@@ -1384,25 +1384,25 @@ final estiloHeader = pw.TextStyle(
     );
   }
 
-  pw.Widget _notaFiscal() {
-    return pw.Center(
-      child: _t(
-        'Documento processado por computador atraves do Sistema de Facturacao Stech ERP.',
-        size: 7,
-        color: PdfColors.grey600,
-      ),
-    );
-  }
+pw.Widget _notaFiscal() {
+  return pw.Center(
+    child: _t(
+      'Documento processado por computador atraves do Sistema de Facturacao Dev258 ERP & PDV.',
+      size: 7,
+      color: PdfColors.grey600,
+    ),
+  );
+}
 
   pw.Widget _rodapePagina(pw.Context ctx) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _t(
-          'Stech Engenharia (c) ${DateTime.now().year}',
-          size: 7,
-          color: PdfColors.grey600,
-        ),
+_t(
+  'Dev258 (c) ${DateTime.now().year}',
+  size: 7,
+  color: PdfColors.grey600,
+),
         _t(
           'Pagina ${ctx.pageNumber} de ${ctx.pagesCount}',
           size: 7,

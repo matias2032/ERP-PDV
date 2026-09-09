@@ -525,11 +525,11 @@ class NotaRetificativaPdfModel {
 
 abstract final class _Empresa {
   static const nomeCompleto =
-      'Segurança Tecnologica SU, LDA (Stech Engenharia)';
+      'Segurança Tecnologica SU, LDA (Dev258)';
   static const bairro = 'Bairro: Chingodzi, Tete';
   static const telefone = 'Número: +258 84 239 0756 ou 87 939 0756';
-  static const email = 'Email: info@stech.co.mz';
-  static const website = 'Website: www.stecheng.co.mz';
+  static const email = 'Email: matiasmatavel1232@gmail.com';
+  static const website = 'Website: www.dev258.co.mz';
   static const nuit = 'NUIT: 401 684 530';
 
   static const List<_Banco> bancos = [
@@ -564,7 +564,7 @@ class _Banco {
 // CORES DA MARCA
 // ═══════════════════════════════════════════════════════════════════
 
-const _kAzul = PdfColor.fromInt(0xFF1B2A6B);
+const _kAzul = PdfColor.fromInt(0xFF3A3E4F);
 const _kVermelho = PdfColor.fromInt(0xFFC8102E);
 
 // ═══════════════════════════════════════════════════════════════════
@@ -706,7 +706,7 @@ Future<File> gerarDocumentoFiscal(
     final pdf = pw.Document(
       title: doc.referencia,
       author: _Empresa.nomeCompleto,
-      creator: 'Sistema de Gestão Stech',
+      creator: 'Sistema de Gestão Dev258 ERP & PDV',
     );
 
     final corAccent = doc.tipo == TipoDocumentoPdf.notaCredito ? _kAzul : _kVermelho;
@@ -1121,7 +1121,7 @@ Future<pw.Document> _buildDocumentoFiscal(
     final pdf = pw.Document(
       title: doc.referencia,
       author: _Empresa.nomeCompleto,
-      creator: 'Sistema de Gestão Stech',
+      creator: 'Sistema de Gestão Dev258 ERP & PDV',
     );
 
     pdf.addPage(
@@ -1849,12 +1849,12 @@ pw.Widget _docFiscalTermos(DocumentoPdfModel doc) {
           width: double.infinity,
           color: PdfColors.grey300,
           padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
-          child: pw.Text(
-            'O pagamento pode ser feito por Cheque, Depósito ou Transferência Bancária'
-            ' — Titular: Stech Engenharia SU, Lda',
-            style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-            textAlign: pw.TextAlign.center,
-          ),
+child: pw.Text(
+  'O pagamento pode ser feito por Cheque, Depósito ou Transferência Bancária'
+  ' — Titular: Segurança Tecnologica SU, Lda (Dev258)',
+  style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+  textAlign: pw.TextAlign.center,
+),
         ),
         pw.Table(
           border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -1897,10 +1897,10 @@ pw.Widget _docFiscalCodigoAT(String codigoAT) {
     width: double.infinity,
     padding: const pw.EdgeInsets.only(top: 4),
     alignment: pw.Alignment.center,
-    child: pw.Text(
-      'Documento processado por computador através do Sistema de Facturação Stech ERP.',
-      // devidamente autorizado pela Administração Tributária de Moçambique – Área Fiscal de Tete
-      textAlign: pw.TextAlign.center,
+child: pw.Text(
+  'Documento processado por computador através do Sistema de Facturação Dev258 ERP & PDV.',
+  // devidamente autorizado pela Administração Tributária de Moçambique – Área Fiscal de Tete
+  textAlign: pw.TextAlign.center,
       style: pw.TextStyle(
         fontSize: 7,
         fontStyle: pw.FontStyle.italic,
@@ -1916,7 +1916,7 @@ pw.Widget _docFiscalCodigoAT(String codigoAT) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _t('Stech Engenharia (c) ${DateTime.now().year}', size: 7, color: PdfColors.grey600),
+_t('Dev258 (c) ${DateTime.now().year}', size: 7, color: PdfColors.grey600),
         _t('Página ${ctx.pageNumber} de ${ctx.pagesCount}', size: 7, color: PdfColors.grey600),
       ],
     );
@@ -1958,8 +1958,8 @@ final bool temCliente =
 
     final pdf = pw.Document(
       title: _nomeAutomaticoComprovativo(pedido.idPedido),
-      author: 'Stech Engenharia',
-      creator: 'Sistema de Gestão',
+      author: 'Dev258',
+      creator: 'Sistema de Gestão Dev258 ERP & PDV',
     );
 
     final double margin = isSmall ? 10 : 40;
@@ -2065,9 +2065,9 @@ final bool temCliente =
       return pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          iconImage != null
-              ? pw.Image(iconImage, width: 48, height: 48)
-              : _t('Stech Engenharia', bold: true, size: 14, color: PdfColors.deepOrange),
+iconImage != null
+    ? pw.Image(iconImage, width: 48, height: 48)
+    : _t('Dev258', bold: true, size: 14, color: PdfColors.deepOrange),
           pw.SizedBox(height: 2),
           _t('COMPROVATIVO DE VENDA', bold: true, size: 11, color: _kAzul),
           pw.SizedBox(height: 2),
@@ -2084,13 +2084,13 @@ final bool temCliente =
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            iconImage != null
-                ? pw.Image(iconImage, width: 90, height: 90)
-                : _t('Stech Engenharia', bold: true, size: 28, color: PdfColors.red),
-            pw.SizedBox(height: 8),
-            _t('Sistema de Gestão de Pedidos', size: 12, color: PdfColors.grey700),
-          ]),
+pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+  iconImage != null
+      ? pw.Image(iconImage, width: 90, height: 90)
+      : _t('Dev258', bold: true, size: 28, color: PdfColors.red),
+  pw.SizedBox(height: 8),
+  _t('Sistema de Gestão de Pedidos', size: 12, color: PdfColors.grey700),
+]),
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
             _t('COMPROVATIVO DE VENDA', bold: true, size: 20),
             pw.SizedBox(height: 4),
@@ -2297,8 +2297,8 @@ final bool temCliente =
             bold: true, size: baseFontSize + (isSmall ? 0 : 2),
             color: isSmall ? PdfColors.black : _kAzul),
         pw.SizedBox(height: isSmall ? 2 : 4),
-        _t('Stech Engenharia (c) ${DateTime.now().year}',
-            size: baseFontSize - 1, color: PdfColors.grey600),
+_t('Dev258 (c) ${DateTime.now().year}',
+    size: baseFontSize - 1, color: PdfColors.grey600),
       ],
     );
   }
@@ -2475,5 +2475,3 @@ class _LinhaItem {
   String get precoStr => isEmpty ? '0,00 MZN' : 'MZN ${precoUnitario.toStringAsFixed(2)}';
   String get totalStr => isEmpty ? '0,00 MZN' : 'MZN ${total.toStringAsFixed(2)}';
 }
-
-

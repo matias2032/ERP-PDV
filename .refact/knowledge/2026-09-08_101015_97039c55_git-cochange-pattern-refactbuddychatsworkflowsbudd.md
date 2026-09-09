@@ -6,7 +6,7 @@ tags:
 - git
 - pattern
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 filenames:
 - .refact/buddy/chats/workflows/buddy_setup_coach.json
 - .refact/buddy/runtime_queue.jsonl
@@ -15,7 +15,7 @@ kind: pattern
 status: proposed
 superseded_by: null
 deprecated_at: null
-review_after: 2026-09-08
+review_after: 2026-09-09
 source_chat_id: null
 created_at: 2026-09-08T08:10:15.660973800+00:00
 summary: null
