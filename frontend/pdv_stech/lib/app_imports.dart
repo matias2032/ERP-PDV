@@ -76,4 +76,6 @@ export 'screens/despesas_excluidas_screen.dart';
 export 'screens/nota_debito_screen.dart';
 export 'screens/devolucao_troca_screen.dart';
 
+export 'screens/importar_backup_screen.dart';
+
 

@@ -7,7 +7,7 @@ import Foundation
 
 import connectivity_plus
 import desktop_drop
-import file_picker
+import file_picker_darwin
 import file_selector_macos
 import printing
 import shared_preferences_foundation

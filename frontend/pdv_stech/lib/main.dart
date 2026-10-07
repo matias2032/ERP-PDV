@@ -277,6 +277,7 @@ ChangeNotifierProvider(
           '/splash'                   : (_) => const SplashScreen(),
           '/gerenciar_clientes'       : (_) => const ClienteListScreen(),
            '/gerenciar_fornecedores'       : (_) => const FornecedorListScreen(),
+
            
           '/gerenciar_documentos'     : (_) => const DocumentosListScreen(),
           '/cadastrar_documentos'     : (_) => const DocumentosFormScreen(),
@@ -288,6 +289,7 @@ ChangeNotifierProvider(
            '/pedidos_credito'      : (_) => const PedidosCreditoScreen(),  
            '/gerenciar_despesas': (_) => const DespesaListScreen(),
            '/despesas_excluidas': (_) => const DespesasExcluidasScreen(),
+           '/importar_backup': (_) => const ImportarBackupScreen(),
            
            
         },

@@ -353,6 +353,23 @@ _MenuGroup(
         ),
     ],
   ),
+
+  _MenuGroup(
+    icon: Icons.backup_rounded,
+    title: 'Backup',
+    items: [
+      _MenuItem(
+        icon: Icons.cloud_download_rounded,
+        title: 'Importar Backup',
+        route: '/importar_backup',
+      ),
+      _MenuItem(
+        icon: Icons.cloud_upload_rounded,
+        title: 'Exportar Backup',
+        route: '/exportar_backup',
+      ),
+    ],
+  ),
 ];
 
   // ─────────────────────────────────────────────────────────────────
