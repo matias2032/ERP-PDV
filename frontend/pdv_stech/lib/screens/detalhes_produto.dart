@@ -5,14 +5,12 @@
 //detalhes_produto.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/api_config.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
-const _kPrimary    =Color.fromARGB(255, 58, 62, 79);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
+import '../theme/app_theme.dart';
 
 class DetalhesProdutoScreen extends StatefulWidget {
   final ProdutoModel produto;
@@ -36,6 +34,42 @@ class _DetalhesProdutoScreenState extends State<DetalhesProdutoScreen> {
 
   int  _quantidade    = 1;
   bool _criandoPedido = false;
+
+  final _qtdCtrl  = TextEditingController(text: '1');
+  final _qtdFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _qtdFocus.addListener(() {
+      if (_qtdFocus.hasFocus) {
+        // Ao tocar no campo, selecciona tudo: o novo número substitui o antigo
+        _qtdCtrl.selection =
+            TextSelection(baseOffset: 0, extentOffset: _qtdCtrl.text.length);
+      } else {
+        // Ao sair do campo, corrige valores vazios ou "0"
+        _sincronizarCampo();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _qtdCtrl.dispose();
+    _qtdFocus.dispose();
+    super.dispose();
+  }
+
+  /// Escreve _quantidade no campo (só quando o texto difere).
+  void _sincronizarCampo() {
+    final t = _quantidade.toString();
+    if (_qtdCtrl.text != t) {
+      _qtdCtrl.value = TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    }
+  }
 
   ProdutoModel get produto      => widget.produto;
   double get precoEfetivo       => produto.precoPromocional ?? produto.preco;
@@ -70,23 +104,29 @@ bool get _edicaoCredito =>
   void _incrementar() {
     if (_quantidade < produto.quantidadeEstoque) {
       setState(() => _quantidade++);
+      _sincronizarCampo();
     } else {
       _snack('Quantidade máxima em estoque atingida', Colors.orange);
     }
   }
 
-  void _decrementar() { if (_quantidade > 1) setState(() => _quantidade--); }
+  void _decrementar() {
+    if (_quantidade > 1) {
+      setState(() => _quantidade--);
+      _sincronizarCampo();
+    }
+  }
 
   void _setQuantidade(int v) {
-    if (v < 1) return;
+    if (v < 1) return; // campo vazio/0 enquanto digita: ignora
     if (v > produto.quantidadeEstoque) {
       _snack('Máximo disponível: ${produto.quantidadeEstoque}', Colors.orange);
       setState(() => _quantidade = produto.quantidadeEstoque);
+      _sincronizarCampo(); // só reescreve o campo quando ultrapassa o limite
       return;
     }
-    setState(() => _quantidade = v);
+    setState(() => _quantidade = v); // NÃO mexe no campo: o utilizador está a digitar
   }
-
 // SUBSTITUI O MÉTODO INTEIRO:
 
 Future<void> _adicionarAoPedido() async {
@@ -170,7 +210,7 @@ _snack(
 
 Navigator.pop(context, resultado);
     } else {
-      _snack('Erro: ${provider.errorMessage}', _kAccent);
+      _snack('Erro: ${provider.errorMessage}', AppColors.vermelhoMarca);
     }
   } finally {
     if (mounted) setState(() => _criandoPedido = false);
@@ -185,14 +225,14 @@ Navigator.pop(context, resultado);
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text(
               adicionando ? 'Adicionar ao Pedido' : 'Confirmar Pedido',
-              style: const TextStyle(color: _kPrimary, fontWeight: FontWeight.bold),
+              style: TextStyle(color: context.cores.marca, fontWeight: FontWeight.bold),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (adicionando) ...[
-                  _dialogInfoBox(icon: Icons.shopping_cart, texto: 'Pedido activo: ${_pedidoAtivo!.referencia}', cor: _kPrimary),
+                  _dialogInfoBox(icon: Icons.shopping_cart, texto: 'Pedido activo: ${_pedidoAtivo!.referencia}', cor: context.cores.marca),
                   const SizedBox(height: 8),
                 ],
                 Text(produto.nomeProduto, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -207,7 +247,7 @@ Navigator.pop(context, resultado);
                   texto: adicionando
                       ? 'Item adicionado ao pedido ${_pedidoAtivo!.referencia}.'
                       : 'O pedido ficará em "Por Finalizar" aguardando confirmação.',
-                  cor: adicionando ? Colors.green : Colors.blue,
+                  cor: adicionando ? context.cores.sucesso : context.cores.info,
                 ),
               ],
             ),
@@ -215,7 +255,7 @@ Navigator.pop(context, resultado);
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: adicionando ? Colors.green[700] : _kPrimary,
+                  backgroundColor: adicionando ? Colors.green[700] : context.cores.marcaBotao,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -231,9 +271,9 @@ Navigator.pop(context, resultado);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cor.withOpacity(0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Row(children: [
         Icon(icon, size: 15, color: cor),
@@ -249,11 +289,11 @@ Navigator.pop(context, resultado);
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          Text(label, style: TextStyle(color: context.cores.textoSecundario, fontSize: 12)),
           Text(valor, style: TextStyle(
             fontWeight: bold ? FontWeight.bold : FontWeight.w500,
             fontSize: bold ? 15 : 13,
-            color: bold ? _kPrimary : Colors.black87,
+            color: bold ? context.cores.marca : context.cores.textoPrincipal,
           )),
         ],
       ),
@@ -273,7 +313,7 @@ Navigator.pop(context, resultado);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: context.cores.fundo,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
@@ -313,11 +353,11 @@ Navigator.pop(context, resultado);
     return SliverAppBar(
       expandedHeight: 160, // ← era 280
       pinned: true,
-      backgroundColor: _kPrimary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       leading: Container(
         margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+        decoration: BoxDecoration(color: AppColors.branco.withValues(alpha: 0.15), shape: BoxShape.circle),
         child: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
       ),
       flexibleSpace: FlexibleSpaceBar(background: _buildImagemHero()),
@@ -325,13 +365,14 @@ Navigator.pop(context, resultado);
   }
 
   Widget _buildImagemHero() {
+    final c = context.cores;
     if (produto.imagemPrincipalUrl == null || produto.imagemPrincipalUrl!.isEmpty) {
       return Container(
-        color: _kPrimary.withOpacity(0.15),
+        color: c.marca.withValues(alpha: 0.15),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.inventory_2_outlined, size: 56, color: _kPrimary.withOpacity(0.4)), // ← era 72
+          Icon(Icons.inventory_2_outlined, size: 56, color: c.marca.withValues(alpha: 0.4)), // ← era 72
           const SizedBox(height: 6),
-          Text('Sem imagem', style: TextStyle(color: _kPrimary.withOpacity(0.5), fontSize: 13)),
+          Text('Sem imagem', style: TextStyle(color: c.marca.withValues(alpha: 0.5), fontSize: 13)),
         ]),
       );
     }
@@ -341,9 +382,9 @@ Navigator.pop(context, resultado);
       width: double.infinity,
       loadingBuilder: (_, child, progress) => progress == null
           ? child
-          : Container(color: Colors.grey[200], child: const Center(child: CircularProgressIndicator(color: _kPrimary))),
+          : Container(color: c.superficieAlt, child: Center(child: CircularProgressIndicator(color: c.marca))),
       errorBuilder: (_, __, ___) =>
-          Container(color: Colors.grey[100], child: const Icon(Icons.broken_image, size: 52, color: Colors.grey)),
+          Container(color: c.superficieAlt, child: Icon(Icons.broken_image, size: 52, color: c.desactivado)),
     );
   }
 
@@ -353,33 +394,34 @@ Navigator.pop(context, resultado);
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           margin: const EdgeInsets.only(bottom: 5),
-          decoration: BoxDecoration(color: _kAccent, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(color: AppColors.vermelhoMarca, borderRadius: BorderRadius.circular(20)),
           child: const Text('🏷️ PROMOÇÃO',
-              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              style: TextStyle(color: AppColors.branco, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
         ),
       Text(produto.nomeProduto,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kPrimary, height: 1.2)), // ← era 22
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.cores.marca, height: 1.2)), // ← era 22
     ]);
   }
 
   Widget _buildPrecoCard() {
+    final c = context.cores;
     return _card(
       child: Row(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Preço', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+          Text('Preço', style: TextStyle(color: c.textoSecundario, fontSize: 11)),
           const SizedBox(height: 2),
           if (temPromocao)
             Text(_currencyFmt.format(produto.preco),
-                style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 13)),
+                style: TextStyle(color: c.textoSecundario, decoration: TextDecoration.lineThrough, fontSize: 13)),
           Text(_currencyFmt.format(precoEfetivo),
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: temPromocao ? _kAccent : _kPrimary)), // ← era 28
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: temPromocao ? c.acentoTexto : c.marca)), // ← era 28
         ]),
         if (temPromocao) ...[
           const Spacer(),
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(Icons.local_offer, color: _kAccent, size: 18),
+            decoration: BoxDecoration(color: c.acento.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(Icons.local_offer, color: c.acentoTexto, size: 18),
           ),
         ],
       ]),
@@ -389,8 +431,8 @@ Navigator.pop(context, resultado);
   Widget _buildInfoCard() {
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Informações',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _kPrimary)),
+        Text('Informações',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.cores.marca)),
         const SizedBox(height: 8),
         _infoRow(Icons.label_outline, 'Marca', nomesMarcas),
         const Divider(height: 12),
@@ -401,9 +443,9 @@ Navigator.pop(context, resultado);
 
   Widget _infoRow(IconData icon, String label, String valor) {
     return Row(children: [
-      Icon(icon, size: 15, color: _kPrimary.withOpacity(0.5)),
+      Icon(icon, size: 15, color: context.cores.marca.withValues(alpha: 0.5)),
       const SizedBox(width: 6),
-      Text('$label:', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+      Text('$label:', style: TextStyle(color: context.cores.textoSecundario, fontSize: 12)),
       const SizedBox(width: 5),
       Expanded(
         child: Text(valor, textAlign: TextAlign.end,
@@ -415,37 +457,38 @@ Navigator.pop(context, resultado);
   Widget _buildDescricaoCard() {
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Descrição',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _kPrimary)),
+        Text('Descrição',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.cores.marca)),
         const SizedBox(height: 6),
         Text(produto.descricao!,
-            style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.4)),
+            style: TextStyle(color: context.cores.textoSecundario, fontSize: 13, height: 1.4)),
       ]),
     );
   }
 
   Widget _buildEstoqueCard() {
+    final c = context.cores;
     final estoque = produto.quantidadeEstoque;
     final Color cor;
     final IconData icon;
     final String texto;
 
     if (estoque == 0) {
-      cor = _kAccent; icon = Icons.remove_circle_outline; texto = 'Produto sem estoque';
+      cor = c.acentoTexto; icon = Icons.remove_circle_outline; texto = 'Produto sem estoque';
     } else if (estoque <= 5) {
-      cor = Colors.orange; icon = Icons.warning_amber_outlined;
+      cor = c.aviso; icon = Icons.warning_amber_outlined;
       texto = 'Apenas $estoque unidade${estoque > 1 ? 's' : ''} disponíve${estoque > 1 ? 'is' : 'l'}';
     } else {
-      cor = Colors.green; icon = Icons.inventory_2_outlined;
+      cor = c.sucesso; icon = Icons.inventory_2_outlined;
       texto = '$estoque unidades disponíveis';
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ← era 14/12
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.08),
+        color: cor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cor.withOpacity(0.3)),
+        border: Border.all(color: cor.withValues(alpha: 0.3)),
       ),
       child: Row(children: [
         Icon(icon, color: cor, size: 18),
@@ -456,9 +499,10 @@ Navigator.pop(context, resultado);
   }
 
   Widget _buildSelectorQuantidade() {
+    final c = context.cores;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Quantidade',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _kPrimary)),
+      Text('Quantidade',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: c.marca)),
       const SizedBox(height: 8),
       Row(children: [
         _btnQtd(icon: Icons.remove, onTap: _decrementar, habilitado: _quantidade > 1),
@@ -467,20 +511,25 @@ Navigator.pop(context, resultado);
           child: Container(
             height: 44, // ← era 52
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.superficie,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(color: c.borda),
             ),
             child: Center(
-              child: TextFormField(
-                key: ValueKey(_quantidade),
-                initialValue: _quantidade.toString(),
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kPrimary),
-                decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
-                onChanged: (v) { final n = int.tryParse(v); if (n != null) _setQuantidade(n); },
-              ),
+child: TextField(
+  controller: _qtdCtrl,
+  focusNode: _qtdFocus,
+  textAlign: TextAlign.center,
+  keyboardType: TextInputType.number,
+  inputFormatters: [
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(7),
+  ],
+  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.marca),
+  decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
+  onChanged: (v) { final n = int.tryParse(v); if (n != null) _setQuantidade(n); },
+  onSubmitted: (_) => _sincronizarCampo(),
+),
             ),
           ),
         ),
@@ -490,13 +539,13 @@ Navigator.pop(context, resultado);
       const SizedBox(height: 8),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: _kPrimary.withOpacity(0.05), borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: c.marca.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Total estimado:', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+            Text('Total estimado:', style: TextStyle(color: c.textoSecundario, fontSize: 13)),
             Text(_currencyFmt.format(totalParcial),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _kPrimary)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.marca)),
           ],
         ),
       ),
@@ -504,15 +553,16 @@ Navigator.pop(context, resultado);
   }
 
   Widget _btnQtd({required IconData icon, required VoidCallback onTap, required bool habilitado}) {
+    final c = context.cores;
     return Material(
-      color: habilitado ? _kPrimary : Colors.grey[200],
+      color: habilitado ? c.marcaBotao : c.superficieAlt,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: habilitado ? onTap : null,
         borderRadius: BorderRadius.circular(10),
         child: SizedBox(
           width: 44, height: 44, // ← era 52×52
-          child: Icon(icon, color: habilitado ? Colors.white : Colors.grey[400], size: 20),
+          child: Icon(icon, color: habilitado ? AppColors.branco : c.desactivado, size: 20),
         ),
       ),
     );
@@ -575,7 +625,7 @@ Widget _buildBotao() {
                 ? Colors.grey
                 : adicionando
                     ? Colors.green[700]
-                    : _kPrimary,
+                    : context.cores.marcaBotao,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -591,10 +641,9 @@ Widget _buildBotao() {
   Widget _card({required Widget child}) {
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: context.cores.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(padding: const EdgeInsets.all(10), child: child), // ← era 16
     );
   }
 }
-

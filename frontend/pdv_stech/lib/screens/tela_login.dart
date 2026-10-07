@@ -5,15 +5,7 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:flutter/material.dart';  // já existe
 import 'package:api_compartilhado/api_compartilhado.dart';  // já existe
 import 'package:api_compartilhado/core/database/daos/usuario_dao.dart'; // ← NOVO
-
-
-// ──────────────────────────────────────────────
-// Paleta STech
-// ──────────────────────────────────────────────
-const _navy   = Color.fromARGB(255, 58, 62, 79);
-const _red    = Color.fromARGB(255, 200, 16, 46);
-const _bg     = Color.fromARGB(255, 244, 245, 247);
-const _border = Color(0xFFE2E5ED);
+import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,6 +50,22 @@ class _LoginScreenState extends State<LoginScreen>
     _animCtrl.dispose();
     super.dispose();
   }
+
+    // ── cores de campos (claro = valores originais) ──
+  Color get _txtLabel => context.escuro
+      ? context.cores.textoPrincipal
+      : const Color(0xFF374151);
+  Color get _txtInput => context.escuro
+      ? context.cores.textoPrincipal
+      : const Color(0xFF111827);
+  Color get _hint => context.escuro
+      ? context.cores.textoSecundario
+      : const Color(0xFF9CA3AF);
+  Color get _fill =>
+      context.escuro ? context.cores.fundo : const Color(0xFFF8F9FB);
+  Color get _borda => context.escuro
+      ? Theme.of(context).colorScheme.outline
+      : const Color(0xFFE2E5ED);
 
   // ── lógica ──────────────────────────────────
 Future<void> _handleLogin() async {
@@ -182,7 +190,7 @@ for (final r in rows) {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.cores.fundo,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -213,7 +221,7 @@ for (final r in rows) {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(32, 36, 32, 48),
       decoration: BoxDecoration(
-        color: _navy,
+        color: AppColors.azulMarca,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -247,7 +255,7 @@ Container(
 const SizedBox(height: 20),
 
           const Text(
-            'ERP & PDV STech',
+            'Gestor STech',
             style: TextStyle(
               fontFamily: 'Georgia',
               fontSize: 22,
@@ -275,9 +283,9 @@ const SizedBox(height: 20),
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(28, 28, 28, 32),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: context.cores.superficie,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +311,7 @@ const SizedBox(height: 20),
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: const Color(0xFF9CA3AF),
+                color: _hint,
               ),
               onPressed: () => setState(() => _obscurePass = !_obscurePass),
             ),
@@ -336,10 +344,10 @@ const SizedBox(height: 20),
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF374151),
+            color: _txtLabel,
             letterSpacing: .5,
           ),
         ),
@@ -349,26 +357,26 @@ const SizedBox(height: 20),
           obscureText:  obscure,
           keyboardType: keyboardType,
           onSubmitted:  onSubmitted,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+          style: TextStyle(fontSize: 14, color: _txtInput),
           decoration: InputDecoration(
             hintText:        hint,
-            hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
-            prefixIcon:      Icon(icon, size: 18, color: const Color(0xFF9CA3AF)),
+            hintStyle: TextStyle(color: _hint, fontSize: 13),
+            prefixIcon:      Icon(icon, size: 18, color: _hint),
             suffixIcon:      suffix,
             filled:          true,
-            fillColor:       const Color(0xFFF8F9FB),
+            fillColor:       _fill,
             contentPadding:  const EdgeInsets.symmetric(vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _border),
+              borderSide: BorderSide(color: _borda),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _border),
+              borderSide: BorderSide(color: _borda),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _navy, width: 1.5),
+              borderSide: BorderSide(color: context.cores.marca, width: 1.5),
             ),
           ),
         ),
@@ -377,25 +385,31 @@ const SizedBox(height: 20),
   }
 
   // ── banner de erro ───────────────────────────
-  Widget _buildErrorBanner() {
+Widget _buildErrorBanner() {
+    final e = context.escuro;
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
+        color: e ? c.perigoFundo : const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        border: Border.all(
+            color: e
+                ? c.perigo.withValues(alpha: .5)
+                : const Color(0xFFFECACA)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              size: 16, color: Color(0xFFC8102E)),
+          Icon(Icons.error_outline_rounded,
+              size: 16, color: c.acentoTexto),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _errorMessage,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF991B1B),
+                color: e ? c.perigo : const Color(0xFF991B1B),
                 height: 1.4,
               ),
             ),
@@ -413,8 +427,9 @@ const SizedBox(height: 20),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _navy,
-          disabledBackgroundColor: _navy.withOpacity(.6),
+          backgroundColor: context.cores.marcaBotao,
+          disabledBackgroundColor:
+              context.cores.marcaBotao.withValues(alpha: .6),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(

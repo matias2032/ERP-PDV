@@ -4,24 +4,23 @@ import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import '../widgets/app_sidebar.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 
-// ─── Paleta ───────────────────────────────────────────────────────────────────
-const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
-const _kCardBg     = Colors.white;
-const _kSuccess    = Color(0xFF2E7D32);
-const _kWarning    = Color(0xFFF59E0B);
-const _kTextSub    = Color(0xFF6B7280);
+// ─── Cores com variação por tema (claro = valores originais) ──────────────────
+Color _corAviso(BuildContext c) =>
+    c.escuro ? c.cores.aviso : const Color(0xFFF59E0B);
 
-const _kAvatarCores = [
-  _kPrimary,
-  _kAccent,
-  _kSuccess,
-  _kWarning,
-  Color(0xFF7C3AED),
-  Color(0xFF0891B2),
-];
+Color _corSucesso(BuildContext c) =>
+    c.escuro ? c.cores.sucesso : const Color(0xFF2E7D32);
+
+List<Color> _avatarCores(BuildContext c) => [
+      c.cores.marca,
+      c.cores.acentoTexto,
+      _corSucesso(c),
+      _corAviso(c),
+      c.escuro ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED),
+      c.escuro ? const Color(0xFF22D3EE) : const Color(0xFF0891B2),
+    ];
 
 // ─── Períodos ─────────────────────────────────────────────────────────────────
 
@@ -228,12 +227,13 @@ Widget build(BuildContext context) {
   final provider = context.watch<PedidoProvider>();
 
   return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness:
+            context.escuro ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: _kBackground,
+        backgroundColor: context.cores.fundo,
         drawer: const AppSidebar(currentRoute: '/dashboard'),
         body: SafeArea(
           child: Column(
@@ -252,7 +252,7 @@ Widget build(BuildContext context) {
 
 Widget _buildHeader(PedidoProvider provider) {
     return Container(
-      color: _kPrimary,
+      color: AppColors.azulMarca,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       child: Row(
         children: [
@@ -316,7 +316,7 @@ Widget _buildHeader(PedidoProvider provider) {
 
   Widget _buildSeletorPeriodo() {
     return Container(
-      color: _kPrimary,
+      color: AppColors.azulMarca,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Container(
         height: 38,
@@ -346,7 +346,7 @@ Widget _buildHeader(PedidoProvider provider) {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: sel ? _kPrimary : Colors.white70,
+                          color: sel ? AppColors.azulMarca : Colors.white70,
                         )),
                   ),
                 ),
@@ -362,8 +362,9 @@ Widget _buildHeader(PedidoProvider provider) {
 
 Widget _buildBody(PedidoProvider provider) {
     if (provider.isLoading && provider.pedidos.isEmpty) {
-    return const Center(
-        child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2.5));
+    return Center(
+        child: CircularProgressIndicator(
+            color: context.cores.marca, strokeWidth: 2.5));
   }
   if (provider.errorMessage != null && provider.pedidos.isEmpty) {
     return Center(
@@ -375,21 +376,22 @@ Widget _buildBody(PedidoProvider provider) {
               Container(
                 width: 56, height: 56,
                 decoration: BoxDecoration(
-                  color: _kAccent.withOpacity(0.08),
+                  color: context.cores.acentoTexto.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.wifi_off_rounded,
-                    color: _kAccent, size: 28),
+                child: Icon(Icons.wifi_off_rounded,
+                    color: context.cores.acentoTexto, size: 28),
               ),
               const SizedBox(height: 14),
                 Text(provider.errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: _kTextSub)),
+                  style: TextStyle(
+                      fontSize: 13, color: context.cores.textoSecundario)),
               const SizedBox(height: 18),
               ElevatedButton.icon(
                 onPressed: _carregar,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kPrimary,
+                  backgroundColor: context.cores.marcaBotao,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -412,7 +414,7 @@ Widget _buildBody(PedidoProvider provider) {
     return FadeTransition(
       opacity: _fadeAnim,
       child: RefreshIndicator(
-        color: _kPrimary,
+        color: context.cores.marca,
         onRefresh: _carregar,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -428,14 +430,14 @@ Widget _buildBody(PedidoProvider provider) {
                 label: 'Pedidos',
                 valor: '${m.totalPedidos}',
                 icone: Icons.receipt_long_outlined,
-                cor: _kPrimary,
+                cor: context.cores.marca,
               )),
               const SizedBox(width: 10),
               Expanded(child: _KpiCard(
                 label: 'Ticket médio',
                 valor: _currencyFmt.format(m.ticketMedio),
                 icone: Icons.analytics_outlined,
-                cor: _kWarning,
+                cor: _corAviso(context),
               )),
             ]),
             const SizedBox(height: 12),
@@ -475,11 +477,11 @@ class _KpiPrincipal extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kPrimary,
+        color: AppColors.azulMarca,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: _kPrimary.withOpacity(0.25),
+            color: AppColors.azulMarca.withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -591,10 +593,10 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: _kCardBg,
+      color: context.cores.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: cor.withOpacity(0.15)),
+        side: BorderSide(color: cor.withValues(alpha: 0.15)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -620,8 +622,8 @@ class _KpiCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: _kTextSub)),
+                style: TextStyle(
+                    fontSize: 11, color: context.cores.textoSecundario)),
           ],
         ),
       ),
@@ -643,12 +645,12 @@ class _BreakdownCard extends StatelessWidget {
     final pctProd  = total > 0 ? metricas.totalProdutos / total : 0.0;
     final pctServ  = total > 0 ? metricas.totalServicos / total : 0.0;
 
-    return Card(
+return Card(
       elevation: 0,
-      color: _kCardBg,
+      color: context.cores.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: context.cores.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -659,18 +661,18 @@ class _BreakdownCard extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.08),
+                  color: context.cores.marca.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(Icons.pie_chart_outline_rounded,
-                    color: _kPrimary, size: 16),
+                child: Icon(Icons.pie_chart_outline_rounded,
+                    color: context.cores.marca, size: 16),
               ),
               const SizedBox(width: 10),
-              const Text('Vendas por tipo',
+              Text('Vendas por tipo',
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: _kPrimary)),
+                      color: context.cores.marca)),
             ]),
             const SizedBox(height: 16),
             _BreakdownLinha(
@@ -678,7 +680,7 @@ class _BreakdownCard extends StatelessWidget {
               descricao: '${metricas.nItensProduto} item(ns)',
               receita:   metricas.totalProdutos,
               pct:       pctProd,
-              cor:       _kPrimary,
+              cor:       context.cores.marca,
               icone:     Icons.inventory_2_outlined,
               currencyFmt: currencyFmt,
             ),
@@ -688,7 +690,7 @@ class _BreakdownCard extends StatelessWidget {
               descricao: '${metricas.nItensServico} item(ns)',
               receita:   metricas.totalServicos,
               pct:       pctServ,
-              cor:       _kAccent,
+              cor:       context.cores.acentoTexto,
               icone:     Icons.miscellaneous_services_outlined,
               currencyFmt: currencyFmt,
             ),
@@ -736,13 +738,13 @@ class _BreakdownLinha extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87)),
+                      color: context.cores.textoPrincipal)),
               Text(descricao,
-                  style: const TextStyle(
-                      fontSize: 11, color: _kTextSub)),
+                  style: TextStyle(
+                      fontSize: 11, color: context.cores.textoSecundario)),
             ],
           ),
         ),
@@ -755,8 +757,8 @@ class _BreakdownLinha extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: cor)),
             Text('${(pct * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(
-                    fontSize: 11, color: _kTextSub)),
+                style: TextStyle(
+                    fontSize: 11, color: context.cores.textoSecundario)),
           ],
         ),
       ]),
@@ -791,10 +793,10 @@ class _DesempenhoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: _kCardBg,
+      color: context.cores.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: context.cores.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -806,35 +808,35 @@ class _DesempenhoCard extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.08),
+                  color: context.cores.marca.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(Icons.leaderboard_rounded,
-                    color: _kPrimary, size: 16),
+                child: Icon(Icons.leaderboard_rounded,
+                    color: context.cores.marca, size: 16),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text('Desempenho por operador',
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: _kPrimary)),
+                        color: context.cores.marca)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.07),
+                  color: context.cores.marca.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                      color: _kPrimary.withOpacity(0.18)),
+                      color: context.cores.marca.withValues(alpha: 0.18)),
                 ),
                 child: Text(
                   '${operadores.length} op.',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: _kPrimary),
+                      color: context.cores.marca),
                 ),
               ),
             ]),
@@ -844,7 +846,8 @@ class _DesempenhoCard extends StatelessWidget {
             ...operadores.asMap().entries.map((e) {
               final idx     = e.key;
               final op      = e.value;
-              final cor     = _kAvatarCores[idx % _kAvatarCores.length];
+              final cores   = _avatarCores(context);
+              final cor     = cores[idx % cores.length];
               final pct     = receitaMax > 0
                   ? (op.totalReceita / receitaMax).clamp(0.0, 1.0)
                   : 0.0;
@@ -906,7 +909,7 @@ class _OperadorLinha extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: isLider ? _kWarning : _kTextSub,
+              color: isLider ? _corAviso(context) : context.cores.textoSecundario,
             ),
           ),
         ),
@@ -938,9 +941,10 @@ class _OperadorLinha extends StatelessWidget {
               child: Container(
                 width: 13, height: 13,
                 decoration: BoxDecoration(
-                  color: _kWarning,
+                  color: const Color(0xFFF59E0B),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(
+                      color: context.cores.superficie, width: 1.5),
                 ),
                 child: const Icon(Icons.star_rounded,
                     color: Colors.white, size: 7),
@@ -955,16 +959,16 @@ class _OperadorLinha extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(operador.nome,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87),
+                      color: context.cores.textoPrincipal),
                   overflow: TextOverflow.ellipsis),
               Text(
                 '${operador.totalPedidos} pedido${operador.totalPedidos != 1 ? 's' : ''}'
                 ' · ticket ${currencyFmt.format(operador.ticketMedio)}',
-                style: const TextStyle(
-                    fontSize: 10, color: _kTextSub),
+                style: TextStyle(
+                    fontSize: 10, color: context.cores.textoSecundario),
               ),
             ],
           ),

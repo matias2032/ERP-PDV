@@ -1,13 +1,11 @@
 //detalhes_servico.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_config.dart';
 import 'package:provider/provider.dart';
-
-const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
-const _kAccent     = Color.fromARGB(255, 200, 16, 46);
-const _kBackground = Color(0xFFF4F5F7);
+import '../theme/app_theme.dart';
 
 class DetalhesServicoScreen extends StatefulWidget {
   final ServicoModel servico;
@@ -24,6 +22,9 @@ class _DetalhesServicoScreenState extends State<DetalhesServicoScreen> {
   int  _quantidade    = 1;
   bool _criandoPedido = false;
 
+  final _qtdCtrl  = TextEditingController(text: '1');
+  final _qtdFocus = FocusNode();
+
   ServicoModel get servico      => widget.servico;
   double get totalParcial       => servico.precoUnitario * _quantidade;
 PedidoModel? get _pedidoAtivo =>
@@ -35,11 +36,51 @@ bool get _temPedidoAtivo => _pedidoAtivo != null;
 bool get _edicaoCredito =>
     PedidoAtivoController.instance.edicaoCredito;
   @override
-  void dispose() { _obsCtrl.dispose(); super.dispose(); }
+  void initState() {
+    super.initState();
+    _qtdFocus.addListener(() {
+      if (_qtdFocus.hasFocus) {
+        _qtdCtrl.selection =
+            TextSelection(baseOffset: 0, extentOffset: _qtdCtrl.text.length);
+      } else {
+        _sincronizarCampo();
+      }
+    });
+  }
 
-  void _incrementar()        => setState(() => _quantidade++);
-  void _decrementar()        { if (_quantidade > 1) setState(() => _quantidade--); }
-  void _setQuantidade(int v) { if (v >= 1) setState(() => _quantidade = v); }
+  @override
+  void dispose() {
+    _obsCtrl.dispose();
+    _qtdCtrl.dispose();
+    _qtdFocus.dispose();
+    super.dispose();
+  }
+
+  void _sincronizarCampo() {
+    final t = _quantidade.toString();
+    if (_qtdCtrl.text != t) {
+      _qtdCtrl.value = TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    }
+  }
+
+  void _incrementar() {
+    setState(() => _quantidade++);
+    _sincronizarCampo();
+  }
+
+  void _decrementar() {
+    if (_quantidade > 1) {
+      setState(() => _quantidade--);
+      _sincronizarCampo();
+    }
+  }
+
+  void _setQuantidade(int v) {
+    if (v >= 1) setState(() => _quantidade = v); // não mexe no campo enquanto digita
+  }
 
   // SUBSTITUI O MÉTODO INTEIRO:
 
@@ -122,7 +163,7 @@ _snack(
 
 Navigator.pop(context, resultado);
     } else {
-      _snack('Erro: ${provider.errorMessage}', _kAccent);
+      _snack('Erro: ${provider.errorMessage}', AppColors.vermelhoMarca);
     }
   } finally {
     if (mounted) setState(() => _criandoPedido = false);
@@ -137,14 +178,14 @@ Navigator.pop(context, resultado);
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text(
               adicionando ? 'Adicionar ao Pedido' : 'Confirmar Pedido',
-              style: const TextStyle(color: _kPrimary, fontWeight: FontWeight.bold),
+              style: TextStyle(color: context.cores.marca, fontWeight: FontWeight.bold),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (adicionando) ...[
-                  _dialogInfoBox(icon: Icons.shopping_cart, texto: 'Pedido activo: ${_pedidoAtivo!.referencia}', cor: _kPrimary),
+                  _dialogInfoBox(icon: Icons.shopping_cart, texto: 'Pedido activo: ${_pedidoAtivo!.referencia}', cor: context.cores.marca),
                   const SizedBox(height: 8),
                 ],
                 Text(servico.nomeServico, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -155,7 +196,7 @@ Navigator.pop(context, resultado);
                 _dialogRow('Subtotal', _currencyFmt.format(totalParcial), bold: true),
                 if (_obsCtrl.text.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  _dialogInfoBox(icon: Icons.notes, texto: 'Obs: ${_obsCtrl.text.trim()}', cor: Colors.grey),
+                  _dialogInfoBox(icon: Icons.notes, texto: 'Obs: ${_obsCtrl.text.trim()}', cor: context.cores.textoSecundario),
                 ],
                 const SizedBox(height: 8),
                 _dialogInfoBox(
@@ -163,7 +204,7 @@ Navigator.pop(context, resultado);
                   texto: adicionando
                       ? 'Item adicionado ao pedido ${_pedidoAtivo!.referencia}.'
                       : 'O pedido ficará em "Por Finalizar" aguardando confirmação.',
-                  cor: adicionando ? Colors.green : Colors.blue,
+                  cor: adicionando ? context.cores.sucesso : context.cores.info,
                 ),
               ],
             ),
@@ -171,7 +212,7 @@ Navigator.pop(context, resultado);
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: adicionando ? Colors.green[700] : _kPrimary,
+                  backgroundColor: adicionando ? Colors.green[700] : context.cores.marcaBotao,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -187,9 +228,9 @@ Navigator.pop(context, resultado);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cor.withOpacity(0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Row(children: [
         Icon(icon, size: 15, color: cor),
@@ -205,11 +246,11 @@ Navigator.pop(context, resultado);
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          Text(label, style: TextStyle(color: context.cores.textoSecundario, fontSize: 12)),
           Text(valor, style: TextStyle(
             fontWeight: bold ? FontWeight.bold : FontWeight.w500,
             fontSize: bold ? 15 : 13,
-            color: bold ? _kPrimary : Colors.black87,
+            color: bold ? context.cores.marca : context.cores.textoPrincipal,
           )),
         ],
       ),
@@ -229,7 +270,7 @@ Navigator.pop(context, resultado);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: context.cores.fundo,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
@@ -266,30 +307,30 @@ Navigator.pop(context, resultado);
     return SliverAppBar(
       pinned: true,
       expandedHeight: 120, // ← era 180
-      backgroundColor: _kPrimary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       leading: Container(
         margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+        decoration: BoxDecoration(color: AppColors.branco.withValues(alpha: 0.15), shape: BoxShape.circle),
         child: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
       ),
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 14),
         title: Text(servico.nomeServico,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.branco),
             maxLines: 1, overflow: TextOverflow.ellipsis),
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [_kPrimary, _kPrimary.withBlue(140)],
+              colors: [AppColors.azulMarca, AppColors.azulMarca.withBlue(140)],
             ),
           ),
           child: Center(
             child: Container(
               width: 56, height: 56, // ← era 80×80
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.miscellaneous_services, size: 30, color: Colors.white), // ← era 42
+              decoration: BoxDecoration(color: AppColors.branco.withValues(alpha: 0.12), shape: BoxShape.circle),
+              child: const Icon(Icons.miscellaneous_services, size: 30, color: AppColors.branco), // ← era 42
             ),
           ),
         ),
@@ -298,69 +339,73 @@ Navigator.pop(context, resultado);
   }
 
   Widget _buildHeader() {
+    final c = context.cores;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: Text(servico.nomeServico,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kPrimary, height: 1.2)), // ← era 22
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.marca, height: 1.2)), // ← era 22
       ),
       const SizedBox(width: 8),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: _kPrimary.withOpacity(0.08),
+          color: c.marca.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kPrimary.withOpacity(0.2)),
+          border: Border.all(color: c.marca.withValues(alpha: 0.2)),
         ),
         child: Text(servico.unidade,
-            style: const TextStyle(fontSize: 11, color: _kPrimary, fontWeight: FontWeight.w600)),
+            style: TextStyle(fontSize: 11, color: c.marca, fontWeight: FontWeight.w600)),
       ),
     ]);
   }
 
   Widget _buildPrecoCard() {
+    final c = context.cores;
     return _card(
       child: Row(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Preço por ${servico.unidade}', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+          Text('Preço por ${servico.unidade}', style: TextStyle(color: c.textoSecundario, fontSize: 11)),
           const SizedBox(height: 2),
           Text(_currencyFmt.format(servico.precoUnitario),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _kPrimary)), // ← era 28
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.marca)), // ← era 28
         ]),
         const Spacer(),
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: _kPrimary.withOpacity(0.08), shape: BoxShape.circle),
-          child: const Icon(Icons.attach_money, color: _kPrimary, size: 20), // ← era 24
+          decoration: BoxDecoration(color: c.marca.withValues(alpha: 0.08), shape: BoxShape.circle),
+          child: Icon(Icons.attach_money, color: c.marca, size: 20), // ← era 24
         ),
       ]),
     );
   }
 
   Widget _buildDescricaoCard() {
+    final c = context.cores;
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Descrição',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _kPrimary)),
+        Text('Descrição',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.marca)),
         const SizedBox(height: 6),
         Text(servico.descricao!,
-            style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.4)),
+            style: TextStyle(color: c.textoSecundario, fontSize: 13, height: 1.4)),
       ]),
     );
   }
 
   Widget _buildSelectorQuantidade() {
+    final c = context.cores;
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Icon(Icons.straighten, size: 14, color: _kPrimary),
+          Icon(Icons.straighten, size: 14, color: c.marca),
           const SizedBox(width: 5),
           Text('Quantidade de ${servico.unidade}s',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _kPrimary)),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.marca)),
         ]),
         const SizedBox(height: 2),
         Text(
           'Ex: 4 × ${_currencyFmt.format(servico.precoUnitario)} = ${_currencyFmt.format(servico.precoUnitario * 4)}',
-          style: TextStyle(color: Colors.grey[500], fontSize: 11),
+          style: TextStyle(color: c.textoSecundario, fontSize: 11),
         ),
         const SizedBox(height: 10), // ← era 14
 
@@ -371,20 +416,25 @@ Navigator.pop(context, resultado);
             child: Container(
               height: 44, // ← era 52
               decoration: BoxDecoration(
-                color: _kBackground,
+                color: c.fundo,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _kPrimary.withOpacity(0.2)),
+                border: Border.all(color: c.marca.withValues(alpha: 0.2)),
               ),
               child: Center(
-                child: TextFormField(
-                  key: ValueKey(_quantidade),
-                  initialValue: _quantidade.toString(),
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kPrimary), // ← era 22
-                  decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
-                  onChanged: (v) { final n = int.tryParse(v); if (n != null) _setQuantidade(n); },
-                ),
+child: TextField(
+  controller: _qtdCtrl,
+  focusNode: _qtdFocus,
+  textAlign: TextAlign.center,
+  keyboardType: TextInputType.number,
+  inputFormatters: [
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(7),
+  ],
+  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.marca),
+  decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
+  onChanged: (v) { final n = int.tryParse(v); if (n != null) _setQuantidade(n); },
+  onSubmitted: (_) => _sincronizarCampo(),
+),
               ),
             ),
           ),
@@ -396,25 +446,25 @@ Navigator.pop(context, resultado);
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ← era 16/12
           decoration: BoxDecoration(
-            color: _kPrimary.withOpacity(0.05),
+            color: c.marca.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total estimado:', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+              Text('Total estimado:', style: TextStyle(color: c.textoSecundario, fontSize: 13)),
               Text(_currencyFmt.format(totalParcial),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _kPrimary)), // ← era 18
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.marca)), // ← era 18
             ],
           ),
         ),
         const SizedBox(height: 8),
         Row(children: [
-          Icon(Icons.info_outline, size: 11, color: Colors.grey[400]),
+          Icon(Icons.info_outline, size: 11, color: c.desactivado),
           const SizedBox(width: 4),
           Expanded(
             child: Text('Serviços não têm limite de quantidade.',
-                style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                style: TextStyle(fontSize: 10, color: c.textoSecundario)),
           ),
         ]),
       ]),
@@ -422,28 +472,30 @@ Navigator.pop(context, resultado);
   }
 
   Widget _btnQtd({required IconData icon, required VoidCallback onTap, required bool habilitado}) {
+    final c = context.cores;
     return Material(
-      color: habilitado ? _kPrimary : Colors.grey[200],
+      color: habilitado ? c.marcaBotao : c.superficieAlt,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: habilitado ? onTap : null,
         borderRadius: BorderRadius.circular(10),
         child: SizedBox(
           width: 44, height: 44, // ← era 52×52
-          child: Icon(icon, color: habilitado ? Colors.white : Colors.grey[400], size: 20),
+          child: Icon(icon, color: habilitado ? AppColors.branco : c.desactivado, size: 20),
         ),
       ),
     );
   }
 
   Widget _buildObservacoes() {
+    final c = context.cores;
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Observações',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _kPrimary)),
+        Text('Observações',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.marca)),
         const SizedBox(height: 2),
         Text('Opcional — ex: papel A4, cores, instruções especiais.',
-            style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            style: TextStyle(fontSize: 11, color: c.textoSecundario)),
         const SizedBox(height: 8),
         TextField(
           controller: _obsCtrl,
@@ -451,17 +503,17 @@ Navigator.pop(context, resultado);
           maxLength: 150,    // ← era 200
           decoration: InputDecoration(
             hintText: 'Escreva aqui…',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+            hintStyle: TextStyle(color: c.textoSecundario, fontSize: 12),
             filled: true,
-            fillColor: _kBackground,
+            fillColor: c.fundo,
             contentPadding: const EdgeInsets.all(10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: _kPrimary.withOpacity(0.15)),
+              borderSide: BorderSide(color: c.marca.withValues(alpha: 0.15)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: _kPrimary.withOpacity(0.15)),
+              borderSide: BorderSide(color: c.marca.withValues(alpha: 0.15)),
             ),
           ),
         ),
@@ -518,7 +570,7 @@ Widget _buildBotao() {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: adicionando ? Colors.green[700] : _kPrimary,
+            backgroundColor: adicionando ? Colors.green[700] : context.cores.marcaBotao,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -534,11 +586,9 @@ Widget _buildBotao() {
   Widget _card({required Widget child}) {
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: context.cores.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(padding: const EdgeInsets.all(10), child: child), // ← era 16
     );
   }
 }
-
-

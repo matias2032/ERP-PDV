@@ -1,15 +1,14 @@
 // frontend/lib/main.dart
 
 import 'app_imports.dart';
-import 'package:flutter/foundation.dart'; // ← Adicionado para fornecer a constante kIsWeb
-import 'dart:io' show Platform; // ← Adicionado para acesso seguro às verificações de plataforma
 import 'package:http/http.dart' as http;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-// ── Inicialização condicional do SQLite (Apenas fora da Web) ───────
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -38,11 +37,16 @@ void main() async {
 
   await ConnectivityService.instance.init();
 
-  runApp(const MyApp());
+  final themeController = ThemeController();
+  await themeController.carregar();
+
+  runApp(MyApp(themeController: themeController));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.themeController});
+
+  final ThemeController themeController;
 
  @override
 Widget build(BuildContext context) {
@@ -173,6 +177,8 @@ fornecedorService: fornecedorService,
 
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider<ThemeController>.value(value: themeController),
+
       // ── Utilizador ────────────────────────────────────────────────
      ChangeNotifierProvider(
   create: (_) => UsuarioProvider(repository: usuarioRepository),
@@ -240,16 +246,12 @@ ChangeNotifierProvider(
       ],
 
 
-      child: MaterialApp(
+      child: Builder(builder: (context) => MaterialApp(
         title: 'Gestor STech',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1B2A6B),
-            primary:   const Color(0xFF1B2A6B),
-          ),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: context.watch<ThemeController>().themeMode,
 
         initialRoute: '/splash',
 
@@ -408,9 +410,8 @@ if (settings.name == '/devolucao_troca') {
               ),
             ),
           ),
-        ),
-      ),
+    ),
+      )),
     );
   }
 }
-

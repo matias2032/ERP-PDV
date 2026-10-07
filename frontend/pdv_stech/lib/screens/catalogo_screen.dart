@@ -2,21 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/api_config.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'detalhes_produto.dart';
 import 'detalhes_servico.dart';
 import 'pedidos_abertos.dart';
-import 'package:provider/provider.dart';
-import 'package:api_compartilhado/api_compartilhado.dart';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONSTANTES DE CORES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
-const _kCardBg     = Colors.white;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TELA PRINCIPAL
@@ -48,48 +39,46 @@ class _CatalogoScreenState extends State<CatalogoScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: context.cores.fundo,
       drawer: const AppSidebar(currentRoute: '/catalogo'),
-     
-
-appBar: AppBar(
-  backgroundColor: _kPrimary,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  title: const Text(
-    'Catálogo',
-    style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
-  ),
-  actions: [
-    _BadgePedidosAbertos(),
-  ],
-  bottom: TabBar(
-    controller: _tabController,
-    indicatorColor: _kAccent,
-    indicatorWeight: 3,
-    labelColor: Colors.white,
-    unselectedLabelColor: Colors.white60,
-    labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-    tabs: const [
-      Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Produtos'),
-      Tab(icon: Icon(Icons.miscellaneous_services_outlined), text: 'Serviços'),
-    ],
-  ),
-),
-body: Column(
-  children: [
-    const _BannerEdicaoCredito(),
-    Expanded(
-      child: TabBarView(
-        controller: _tabController,
-        children: const [
-          _ProdutosTab(),
-          _ServicosTab(),
+      appBar: AppBar(
+        backgroundColor: AppColors.azulMarca,
+        foregroundColor: AppColors.branco,
+        elevation: 0,
+        title: const Text(
+          'Catálogo',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        ),
+        actions: [
+          _BadgePedidosAbertos(),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.vermelhoMarca,
+          indicatorWeight: 3,
+          labelColor: AppColors.branco,
+          unselectedLabelColor: AppColors.branco.withValues(alpha: 0.6),
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          tabs: const [
+            Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Produtos'),
+            Tab(icon: Icon(Icons.miscellaneous_services_outlined), text: 'Serviços'),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          const _BannerEdicaoCredito(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [
+                _ProdutosTab(),
+                _ServicosTab(),
+              ],
+            ),
+          ),
         ],
       ),
-    ),
-  ],
-),
     );
   }
 }
@@ -107,14 +96,12 @@ class _ProdutosTab extends StatefulWidget {
 
 class _ProdutosTabState extends State<_ProdutosTab>
     with AutomaticKeepAliveClientMixin {
- 
+
   final _searchCtrl = TextEditingController();
   final _currencyFmt = NumberFormat.currency(locale: 'pt_PT', symbol: 'MZN');
 
   List<ProdutoModel> _todos     = [];
-List<ProdutoModel> _filtrados = [];
-
- 
+  List<ProdutoModel> _filtrados = [];
 
   // filtros
   String _buscaNome   = '';
@@ -127,28 +114,25 @@ List<ProdutoModel> _filtrados = [];
   @override
   bool get wantKeepAlive => true;
 
-@override
-void initState() {
-  super.initState();
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    context.read<ProdutoProvider>().listarAtivos();
-  });
-  _searchCtrl.addListener(() {
-    setState(() {
-      _buscaNome = _searchCtrl.text.toLowerCase();
-      _aplicarFiltros();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProdutoProvider>().listarAtivos();
     });
-  });
-}
+    _searchCtrl.addListener(() {
+      setState(() {
+        _buscaNome = _searchCtrl.text.toLowerCase();
+        _aplicarFiltros();
+      });
+    });
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-
-
 
   void _aplicarFiltros() {
     _filtrados = _todos.where((p) {
@@ -162,29 +146,26 @@ void initState() {
     }).toList();
   }
 
-Future<void> _toggleStatus(ProdutoModel produto) async {
-  final ok = await _confirmarDialog(
-    context,
-    titulo: '${produto.estaAtivo ? 'Desativar' : 'Ativar'} Produto',
-    corpo: 'Deseja ${produto.estaAtivo ? 'desativar' : 'ativar'} "${produto.nomeProduto}"?',
-    corBotao: produto.estaAtivo ? Colors.orange : Colors.green,
-    labelBotao: produto.estaAtivo ? 'Desativar' : 'Ativar',
-  );
-  if (!ok) return;
+  Future<void> _toggleStatus(ProdutoModel produto) async {
+    final ok = await _confirmarDialog(
+      context,
+      titulo: '${produto.estaAtivo ? 'Desativar' : 'Ativar'} Produto',
+      corpo: 'Deseja ${produto.estaAtivo ? 'desativar' : 'ativar'} "${produto.nomeProduto}"?',
+      corBotao: produto.estaAtivo ? Colors.orange : Colors.green,
+      labelBotao: produto.estaAtivo ? 'Desativar' : 'Ativar',
+    );
+    if (!ok) return;
 
-  await context.read<ProdutoProvider>().toggleAtivo(produto.idProduto);
+    await context.read<ProdutoProvider>().toggleAtivo(produto.idProduto);
 
-  if (!mounted) return;
-  final provider = context.read<ProdutoProvider>();
-  if (provider.status == ProdutoStatus.success) {
-    _mostrarSnack('Status atualizado com sucesso!', Colors.green);
-  } else {
-    _mostrarSnack('Erro: ${provider.errorMessage}', Colors.red);
+    if (!mounted) return;
+    final provider = context.read<ProdutoProvider>();
+    if (provider.status == ProdutoStatus.success) {
+      _mostrarSnack('Status atualizado com sucesso!', Colors.green);
+    } else {
+      _mostrarSnack('Erro: ${provider.errorMessage}', Colors.red);
+    }
   }
-}
-
-
-
 
   void _mostrarSnack(String msg, Color cor) {
     if (!mounted) return;
@@ -193,36 +174,37 @@ Future<void> _toggleStatus(ProdutoModel produto) async {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  super.build(context);
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
 
-  // Aqui lês o provider. Sempre que ele mudar (novo carregamento,
-  // erro, lista actualizada), o Flutter redesenha este widget.
-  final provider = context.watch<ProdutoProvider>();
+    // Aqui lês o provider. Sempre que ele mudar (novo carregamento,
+    // erro, lista actualizada), o Flutter redesenha este widget.
+    final provider = context.watch<ProdutoProvider>();
 
-  // Sincroniza a lista local de filtros com o que o Provider tem
-  // (só quando não está a carregar e não há erro)
-  if (!provider.isLoading && provider.errorMessage == null) {
-    _todos = provider.produtosAtivos;
-    _aplicarFiltros();
+    // Sincroniza a lista local de filtros com o que o Provider tem
+    // (só quando não está a carregar e não há erro)
+    if (!provider.isLoading && provider.errorMessage == null) {
+      _todos = provider.produtosAtivos;
+      _aplicarFiltros();
+    }
+
+    return Scaffold(
+      backgroundColor: context.cores.fundo,
+      body: Column(
+        children: [
+          _buildFiltros(),
+          Expanded(child: _buildLista(provider)),
+        ],
+      ),
+    );
   }
-
-  return Scaffold(
-    backgroundColor: _kBackground,
-    body: Column(
-      children: [
-        _buildFiltros(),
-        Expanded(child: _buildLista(provider)),
-      ],
-    ),
-  );
-}
 
   // ── Painel de Filtros ──────────────────────────────────────────────────────
   Widget _buildFiltros() {
+    final c = context.cores;
     return Container(
-      color: _kPrimary.withOpacity(0.04),
+      color: c.marca.withValues(alpha: 0.04),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
         children: [
@@ -231,7 +213,7 @@ Widget build(BuildContext context) {
             controller: _searchCtrl,
             decoration: InputDecoration(
               hintText: 'Pesquisar produto…',
-              prefixIcon: const Icon(Icons.search, color: _kPrimary),
+              prefixIcon: Icon(Icons.search, color: c.marca),
               suffixIcon: _buscaNome.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -241,7 +223,7 @@ Widget build(BuildContext context) {
                       })
                   : null,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: c.superficie,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -269,7 +251,7 @@ Widget build(BuildContext context) {
             alignment: Alignment.centerRight,
             child: Text(
               '${_filtrados.length} produto(s) encontrado(s)',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: c.textoSecundario),
             ),
           ),
         ],
@@ -278,61 +260,64 @@ Widget build(BuildContext context) {
   }
 
   // ── Lista ──────────────────────────────────────────────────────────────────
- Widget _buildLista(ProdutoProvider provider) {
-  if (provider.isLoading) {
-    return const Center(child: CircularProgressIndicator(color: _kPrimary));
-  }
-  if (provider.errorMessage != null) {
-    return _ErroWidget(
-      mensagem: provider.errorMessage!,
-      onRetry: () => context.read<ProdutoProvider>().listarAtivos(),
-    );
-  }
-  if (_filtrados.isEmpty) {
-    return _VazioWidget(
-      icone: Icons.inventory_2_outlined,
-      mensagem: _todos.isEmpty
-          ? 'Nenhum produto cadastrado'
-          : 'Nenhum produto corresponde ao filtro',
-    );
-  }
+  Widget _buildLista(ProdutoProvider provider) {
+    if (provider.isLoading) {
+      return Center(
+        child: CircularProgressIndicator(color: context.cores.marca),
+      );
+    }
+    if (provider.errorMessage != null) {
+      return _ErroWidget(
+        mensagem: provider.errorMessage!,
+        onRetry: () => context.read<ProdutoProvider>().listarAtivos(),
+      );
+    }
+    if (_filtrados.isEmpty) {
+      return _VazioWidget(
+        icone: Icons.inventory_2_outlined,
+        mensagem: _todos.isEmpty
+            ? 'Nenhum produto cadastrado'
+            : 'Nenhum produto corresponde ao filtro',
+      );
+    }
 
-  return RefreshIndicator(
-    color: _kAccent,
-    onRefresh: () => context.read<ProdutoProvider>().listarAtivos(),
-    child: Column(
-      children: [
-        // cabeçalho da tabela — inalterado
-        Container( /* igual ao original */ ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
-            itemCount: _filtrados.length,
-            itemBuilder: (_, i) {
-              final produto = _filtrados[i];
-              return _ProdutoLinhaTabela(
-                produto: produto,
-                currencyFmt: _currencyFmt,
-                isAlternate: i.isOdd,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DetalhesProdutoScreen(
-                      produto: produto,
-                      marcas: const [],
-                      categorias: const [],
+    return RefreshIndicator(
+      color: context.cores.acentoTexto,
+      onRefresh: () => context.read<ProdutoProvider>().listarAtivos(),
+      child: Column(
+        children: [
+          // cabeçalho da tabela — inalterado
+          // TODO(tema): cola aqui o Container real do cabeçalho (no teu ficheiro
+          // o conteúdo foi omitido como "/* igual ao original */").
+          Container( /* igual ao original */ ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
+              itemCount: _filtrados.length,
+              itemBuilder: (_, i) {
+                final produto = _filtrados[i];
+                return _ProdutoLinhaTabela(
+                  produto: produto,
+                  currencyFmt: _currencyFmt,
+                  isAlternate: i.isOdd,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetalhesProdutoScreen(
+                        produto: produto,
+                        marcas: const [],
+                        categorias: const [],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Card de Produto (mantido para uso interno/admin) ─────────────────────────
@@ -354,15 +339,18 @@ class _ProdutoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final temPromo = produto.precoPromocional != null;
     final semEstoque = produto.quantidadeEstoque <= 0;
+    final c = context.cores;
 
     return Card(
-      color: _kCardBg,
+      color: c.superficie,
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: produto.estaAtivo ? Colors.transparent : Colors.red.withOpacity(0.3),
+          color: produto.estaAtivo
+              ? Colors.transparent
+              : c.perigo.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -413,16 +401,16 @@ class _ProdutoCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: temPromo ? Colors.green[700] : _kPrimary,
+                            color: temPromo ? c.sucesso : c.marca,
                           ),
                         ),
                         if (temPromo) ...[
                           const SizedBox(width: 8),
                           Text(
                             currencyFmt.format(produto.preco),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey,
+                              color: c.textoSecundario,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
@@ -439,7 +427,7 @@ class _ProdutoCard extends StatelessWidget {
                         Icon(
                           semEstoque ? Icons.warning_amber_rounded : Icons.inventory_2,
                           size: 13,
-                          color: semEstoque ? Colors.red : Colors.blue[700],
+                          color: semEstoque ? c.perigo : c.info,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -448,7 +436,7 @@ class _ProdutoCard extends StatelessWidget {
                               : '${produto.quantidadeEstoque} em estoque',
                           style: TextStyle(
                             fontSize: 12,
-                            color: semEstoque ? Colors.red : Colors.grey[700],
+                            color: semEstoque ? c.perigo : c.icone,
                             fontWeight: semEstoque ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
@@ -461,7 +449,7 @@ class _ProdutoCard extends StatelessWidget {
               // Menu
               PopupMenuButton<String>(
                 onSelected: (v) => v == 'editar' ? onEdit() : onToggle(),
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                icon: Icon(Icons.more_vert, color: c.icone),
                 itemBuilder: (_) => [
                   const PopupMenuItem(
                     value: 'editar',
@@ -477,7 +465,7 @@ class _ProdutoCard extends StatelessWidget {
                       Icon(
                         produto.estaAtivo ? Icons.block : Icons.check_circle_outline,
                         size: 18,
-                        color: produto.estaAtivo ? Colors.orange : Colors.green,
+                        color: produto.estaAtivo ? c.aviso : c.sucesso,
                       ),
                       const SizedBox(width: 8),
                       Text(produto.estaAtivo ? 'Desativar' : 'Ativar'),
@@ -500,36 +488,39 @@ class _ProdutoImagem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (produto.imagemPrincipalUrl == null || produto.imagemPrincipalUrl!.isEmpty) {
-      return _placeholder();
+      return _placeholder(context);
     }
     final url = '${ApiConfig.baseUrl}${produto.imagemPrincipalUrl}';
-   return Image.network(
-  url,
-  width: double.infinity,
-  height: 90,
+    return Image.network(
+      url,
+      width: double.infinity,
+      height: 90,
       fit: BoxFit.cover,
       loadingBuilder: (_, child, progress) => progress == null
           ? child
           : Container(
               width: double.infinity,
               height: 90,
-              color: Colors.grey[100],
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
+              color: context.cores.fundo,
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: context.cores.marca,
+                ),
               ),
             ),
-      errorBuilder: (_, __, ___) => _placeholder(),
+      errorBuilder: (_, __, ___) => _placeholder(context),
     );
   }
 
- Widget _placeholder() => Container(
-      width: double.infinity,
-      height: 90,
+  Widget _placeholder(BuildContext context) => Container(
+        width: double.infinity,
+        height: 90,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: context.cores.fundo,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Icon(Icons.inventory, color: Colors.grey, size: 32),
+        child: Icon(Icons.inventory, color: context.cores.desactivado, size: 32),
       );
 }
 
@@ -550,10 +541,8 @@ class _ServicosTabState extends State<_ServicosTab>
   final _searchCtrl = TextEditingController();
   final _currencyFmt = NumberFormat.currency(locale: 'pt_PT', symbol: 'MZN');
 
-
   List<ServicoModel> _filtrados = [];
-List<ServicoModel> _todos     = [];
-
+  List<ServicoModel> _todos     = [];
 
   // filtros
   String _buscaNomeServ = '';
@@ -563,27 +552,25 @@ List<ServicoModel> _todos     = [];
   @override
   bool get wantKeepAlive => true;
 
-@override
-void initState() {
-  super.initState();
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    context.read<ServicoProvider>().carregarServicosAtivos();
-  });
-  _searchCtrl.addListener(() {
-    setState(() {
-      _buscaNomeServ = _searchCtrl.text.toLowerCase();
-      _aplicarFiltros();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ServicoProvider>().carregarServicosAtivos();
     });
-  });
-}
+    _searchCtrl.addListener(() {
+      setState(() {
+        _buscaNomeServ = _searchCtrl.text.toLowerCase();
+        _aplicarFiltros();
+      });
+    });
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-
 
   void _aplicarFiltros() {
     _filtrados = _todos.where((s) {
@@ -592,26 +579,27 @@ void initState() {
       return matchNome && matchPreco;
     }).toList();
   }
-Future<void> _toggleStatus(ServicoModel servico) async {
-  final ok = await _confirmarDialog(
-    context,
-    titulo: '${servico.ativo ? 'Desativar' : 'Ativar'} Serviço',
-    corpo: 'Deseja ${servico.ativo ? 'desativar' : 'ativar'} "${servico.nomeServico}"?',
-    corBotao: servico.ativo ? Colors.orange : Colors.green,
-    labelBotao: servico.ativo ? 'Desativar' : 'Ativar',
-  );
-  if (!ok) return;
 
-  await context.read<ServicoProvider>().toggleEstadoServico(servico.idServico);
+  Future<void> _toggleStatus(ServicoModel servico) async {
+    final ok = await _confirmarDialog(
+      context,
+      titulo: '${servico.ativo ? 'Desativar' : 'Ativar'} Serviço',
+      corpo: 'Deseja ${servico.ativo ? 'desativar' : 'ativar'} "${servico.nomeServico}"?',
+      corBotao: servico.ativo ? Colors.orange : Colors.green,
+      labelBotao: servico.ativo ? 'Desativar' : 'Ativar',
+    );
+    if (!ok) return;
 
-  if (!mounted) return;
-  final provider = context.read<ServicoProvider>();
-  if (provider.errorMessage == null) {
-    _mostrarSnack('Status atualizado com sucesso!', Colors.green);
-  } else {
-    _mostrarSnack('Erro: ${provider.errorMessage}', Colors.red);
+    await context.read<ServicoProvider>().toggleEstadoServico(servico.idServico);
+
+    if (!mounted) return;
+    final provider = context.read<ServicoProvider>();
+    if (provider.errorMessage == null) {
+      _mostrarSnack('Status atualizado com sucesso!', Colors.green);
+    } else {
+      _mostrarSnack('Erro: ${provider.errorMessage}', Colors.red);
+    }
   }
-}
 
   void _mostrarSnack(String msg, Color cor) {
     if (!mounted) return;
@@ -621,129 +609,134 @@ Future<void> _toggleStatus(ServicoModel servico) async {
   }
 
   Widget _buildFiltros() {
-  return Container(
-    color: _kPrimary.withOpacity(0.04),
-    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-    child: Column(
-      children: [
-        TextField(
-          controller: _searchCtrl,
-          decoration: InputDecoration(
-            hintText: 'Pesquisar serviço…',
-            prefixIcon: const Icon(Icons.search, color: _kPrimary),
-            suffixIcon: _buscaNomeServ.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchCtrl.clear();
-                      setState(() { _buscaNomeServ = ''; _aplicarFiltros(); });
-                    })
-                : null,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+    final c = context.cores;
+    return Container(
+      color: c.marca.withValues(alpha: 0.04),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: 'Pesquisar serviço…',
+              prefixIcon: Icon(Icons.search, color: c.marca),
+              suffixIcon: _buscaNomeServ.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() { _buscaNomeServ = ''; _aplicarFiltros(); });
+                      })
+                  : null,
+              filled: true,
+              fillColor: c.superficie,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (v) => setState(() { _buscaNomeServ = v.toLowerCase(); _aplicarFiltros(); }),
+          ),
+          const SizedBox(height: 8),
+          _FiltroPrecoRow(
+            precoMin: _precoMinServ,
+            precoMax: _precoMaxServ,
+            precoMaxAbsoluto: _todos.isEmpty
+                ? 999999
+                : _todos.map((s) => s.precoUnitario).reduce((a, b) => a > b ? a : b),
+            onChanged: (min, max) =>
+                setState(() { _precoMinServ = min; _precoMaxServ = max; _aplicarFiltros(); }),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '${_filtrados.length} serviço(s) encontrado(s)',
+              style: TextStyle(fontSize: 11, color: c.textoSecundario),
             ),
           ),
-          onChanged: (v) => setState(() { _buscaNomeServ = v.toLowerCase(); _aplicarFiltros(); }),
-        ),
-        const SizedBox(height: 8),
-        _FiltroPrecoRow(
-          precoMin: _precoMinServ,
-          precoMax: _precoMaxServ,
-          precoMaxAbsoluto: _todos.isEmpty
-              ? 999999
-              : _todos.map((s) => s.precoUnitario).reduce((a, b) => a > b ? a : b),
-          onChanged: (min, max) =>
-              setState(() { _precoMinServ = min; _precoMaxServ = max; _aplicarFiltros(); }),
-        ),
-        const SizedBox(height: 4),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '${_filtrados.length} serviço(s) encontrado(s)',
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-@override
-Widget build(BuildContext context) {
-  super.build(context);
-
-  final provider = context.watch<ServicoProvider>();
-
-  if (!provider.isLoading && provider.errorMessage == null) {
-    _todos = provider.servicos;
-    _aplicarFiltros();
-  }
-
-  return Scaffold(
-    backgroundColor: _kBackground,
-    body: Column(
-      children: [
-        _buildFiltros(),
-        Expanded(child: _buildLista(provider)),
-      ],
-    ),
-  );
-}
-
-Widget _buildLista(ServicoProvider provider) {
-  if (provider.isLoading) {
-    return const Center(child: CircularProgressIndicator(color: _kPrimary));
-  }
-  if (provider.errorMessage != null) {
-    return _ErroWidget(
-      mensagem: provider.errorMessage!,
-      onRetry: () => context.read<ServicoProvider>().carregarServicosAtivos(),
-    );
-  }
-  if (_filtrados.isEmpty) {
-    return _VazioWidget(
-      icone: Icons.miscellaneous_services_outlined,
-      mensagem: _todos.isEmpty
-          ? 'Nenhum serviço cadastrado'
-          : 'Nenhum serviço corresponde ao filtro',
+        ],
+      ),
     );
   }
 
-  return RefreshIndicator(
-    color: _kAccent,
-    onRefresh: () => context.read<ServicoProvider>().carregarServicosAtivos(),
-    child: Column(
-      children: [
-        // cabeçalho da tabela — inalterado
-        Container( /* igual ao original */ ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
-            itemCount: _filtrados.length,
-            itemBuilder: (_, i) {
-              final servico = _filtrados[i];
-              return _ServicoLinhaTabela(
-                servico: servico,
-                currencyFmt: _currencyFmt,
-                isAlternate: i.isOdd,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DetalhesServicoScreen(servico: servico),
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    final provider = context.watch<ServicoProvider>();
+
+    if (!provider.isLoading && provider.errorMessage == null) {
+      _todos = provider.servicos;
+      _aplicarFiltros();
+    }
+
+    return Scaffold(
+      backgroundColor: context.cores.fundo,
+      body: Column(
+        children: [
+          _buildFiltros(),
+          Expanded(child: _buildLista(provider)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLista(ServicoProvider provider) {
+    if (provider.isLoading) {
+      return Center(
+        child: CircularProgressIndicator(color: context.cores.marca),
+      );
+    }
+    if (provider.errorMessage != null) {
+      return _ErroWidget(
+        mensagem: provider.errorMessage!,
+        onRetry: () => context.read<ServicoProvider>().carregarServicosAtivos(),
+      );
+    }
+    if (_filtrados.isEmpty) {
+      return _VazioWidget(
+        icone: Icons.miscellaneous_services_outlined,
+        mensagem: _todos.isEmpty
+            ? 'Nenhum serviço cadastrado'
+            : 'Nenhum serviço corresponde ao filtro',
+      );
+    }
+
+    return RefreshIndicator(
+      color: context.cores.acentoTexto,
+      onRefresh: () => context.read<ServicoProvider>().carregarServicosAtivos(),
+      child: Column(
+        children: [
+          // cabeçalho da tabela — inalterado
+          // TODO(tema): cola aqui o Container real do cabeçalho (no teu ficheiro
+          // o conteúdo foi omitido como "/* igual ao original */").
+          Container( /* igual ao original */ ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
+              itemCount: _filtrados.length,
+              itemBuilder: (_, i) {
+                final servico = _filtrados[i];
+                return _ServicoLinhaTabela(
+                  servico: servico,
+                  currencyFmt: _currencyFmt,
+                  isAlternate: i.isOdd,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetalhesServicoScreen(servico: servico),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Card de Serviço (mantido para uso interno/admin) ─────────────────────────
@@ -763,14 +756,18 @@ class _ServicoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Card(
-      color: _kCardBg,
+      color: c.superficie,
       elevation: 2,
-margin: EdgeInsets.zero,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: servico.ativo ? Colors.transparent : Colors.red.withOpacity(0.3),
+          color: servico.ativo
+              ? Colors.transparent
+              : c.perigo.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -791,12 +788,12 @@ margin: EdgeInsets.zero,
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: _kPrimary.withOpacity(0.08),
+                      color: c.marca.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.miscellaneous_services,
-                      color: _kPrimary,
+                      color: c.marca,
                       size: 26,
                     ),
                   ),
@@ -825,7 +822,7 @@ margin: EdgeInsets.zero,
                             padding: const EdgeInsets.only(top: 3),
                             child: Text(
                               servico.descricao!,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              style: TextStyle(fontSize: 12, color: c.textoSecundario),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -835,7 +832,7 @@ margin: EdgeInsets.zero,
                   ),
                   PopupMenuButton<String>(
                     onSelected: (v) => v == 'editar' ? onEdit() : onToggle(),
-                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    icon: Icon(Icons.more_vert, color: c.icone),
                     itemBuilder: (_) => [
                       const PopupMenuItem(
                         value: 'editar',
@@ -851,7 +848,7 @@ margin: EdgeInsets.zero,
                           Icon(
                             servico.ativo ? Icons.block : Icons.check_circle_outline,
                             size: 18,
-                            color: servico.ativo ? Colors.orange : Colors.green,
+                            color: servico.ativo ? c.aviso : c.sucesso,
                           ),
                           const SizedBox(width: 8),
                           Text(servico.ativo ? 'Desativar' : 'Ativar'),
@@ -867,39 +864,39 @@ margin: EdgeInsets.zero,
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.05),
+                  color: c.marca.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.attach_money, size: 16, color: _kPrimary),
+                    Icon(Icons.attach_money, size: 16, color: c.marca),
                     const SizedBox(width: 4),
                     Text(
                       currencyFmt.format(servico.precoUnitario),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: _kPrimary,
+                        color: c.marca,
                       ),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: c.infoFundo,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(color: c.info.withValues(alpha: 0.4)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.straighten, size: 12, color: Colors.blue[700]),
+                          Icon(Icons.straighten, size: 12, color: c.info),
                           const SizedBox(width: 4),
                           Text(
                             'por ${servico.unidade}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.blue[700],
+                              color: c.info,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -937,6 +934,7 @@ class _FiltroChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -947,10 +945,10 @@ class _FiltroChips extends StatelessWidget {
             child: ChoiceChip(
               label: Text(e.value),
               selected: sel,
-              selectedColor: _kPrimary,
+              selectedColor: c.marcaBotao,
               labelStyle: TextStyle(
                 fontSize: 11,
-                color: sel ? Colors.white : Colors.grey[700],
+                color: sel ? AppColors.branco : c.icone,
               ),
               onSelected: (_) => onChanged(e.key),
             ),
@@ -968,19 +966,20 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: ativo ? Colors.green[50] : Colors.red[50],
+        color: ativo ? c.sucessoFundo : c.perigoFundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: ativo ? Colors.green : Colors.red),
+        border: Border.all(color: ativo ? c.sucesso : c.perigo),
       ),
       child: Text(
         ativo ? 'Ativo' : 'Inativo',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: ativo ? Colors.green[700] : Colors.red[700],
+          color: ativo ? c.sucesso : c.perigo,
         ),
       ),
     );
@@ -994,14 +993,14 @@ class _PromoTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.green[700],
+        color: Colors.green[700], // fixo de propósito: fundo verde + texto branco
         borderRadius: BorderRadius.circular(4),
       ),
       child: const Text(
         'PROMO',
         style: TextStyle(
           fontSize: 9,
-          color: Colors.white,
+          color: AppColors.branco,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
         ),
@@ -1018,24 +1017,25 @@ class _ErroWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 56, color: Colors.red),
+            Icon(Icons.error_outline, size: 56, color: c.perigo),
             const SizedBox(height: 12),
             Text(mensagem,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red)),
+                style: TextStyle(color: c.perigo)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh, color: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: c.marcaBotao),
+              icon: const Icon(Icons.refresh, color: AppColors.branco),
               label: const Text('Tentar Novamente',
-                  style: TextStyle(color: Colors.white)),
+                  style: TextStyle(color: AppColors.branco)),
             ),
           ],
         ),
@@ -1056,10 +1056,11 @@ class _VazioWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icone, size: 72, color: Colors.grey[300]),
+          Icon(icone, size: 72, color: context.cores.desactivado),
           const SizedBox(height: 12),
           Text(mensagem,
-              style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+              style: TextStyle(
+                  fontSize: 16, color: context.cores.textoSecundario)),
         ],
       ),
     );
@@ -1082,9 +1083,10 @@ class _ProdutoCardCatalogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final temPromo   = produto.precoPromocional != null;
     final semEstoque = produto.quantidadeEstoque <= 0;
+    final c = context.cores;
 
     return Card(
-      color: Colors.white,
+      color: c.superficie,
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1095,11 +1097,11 @@ class _ProdutoCardCatalogo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Imagem
-           ClipRRect(
-  borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-  child: Stack(
-    children: [
-      SizedBox(width: double.infinity, height: 90, child: _ProdutoImagem(produto: produto)),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Stack(
+                children: [
+                  SizedBox(width: double.infinity, height: 90, child: _ProdutoImagem(produto: produto)),
                   if (temPromo)
                     Positioned(
                       top: 8,
@@ -1107,23 +1109,23 @@ class _ProdutoCardCatalogo extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _kAccent,
+                          color: AppColors.vermelhoMarca,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text('PROMO',
                             style: TextStyle(
-                                color: Colors.white, fontSize: 10,
+                                color: AppColors.branco, fontSize: 10,
                                 fontWeight: FontWeight.bold)),
                       ),
                     ),
                   if (semEstoque)
                     Positioned.fill(
                       child: Container(
-                        color: Colors.black38,
+                        color: Colors.black38, // overlay sobre imagem: fixo de propósito
                         child: const Center(
                           child: Text('SEM ESTOQUE',
                               style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.branco,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13)),
                         ),
@@ -1135,26 +1137,26 @@ class _ProdutoCardCatalogo extends StatelessWidget {
 
             // Informações
             Padding(
-padding: const EdgeInsets.all(7),
+              padding: const EdgeInsets.all(7),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(produto.nomeProduto,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kPrimary)),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c.marca)),
                   const SizedBox(height: 6),
 
                   // Preço
                   if (temPromo)
                     Text(currencyFmt.format(produto.preco),
-                        style: const TextStyle(fontSize: 9, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+                        style: TextStyle(fontSize: 9, color: c.textoSecundario, decoration: TextDecoration.lineThrough)),
                   Text(
                     currencyFmt.format(produto.precoEfectivo),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: temPromo ? _kAccent : _kPrimary,
+                      color: temPromo ? c.acentoTexto : c.marca,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1164,12 +1166,12 @@ style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kPrima
                     Icon(
                       semEstoque ? Icons.remove_circle_outline : Icons.inventory_2_outlined,
                       size: 13,
-                      color: semEstoque ? Colors.red : Colors.green,
+                      color: semEstoque ? c.perigo : c.sucesso,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       semEstoque ? 'Esgotado' : '${produto.quantidadeEstoque} disponíveis',
-                    style: TextStyle(fontSize: 9, color: semEstoque ? Colors.red : Colors.grey[600]),
+                      style: TextStyle(fontSize: 9, color: semEstoque ? c.perigo : c.textoSecundario),
                     ),
                   ]),
                 ],
@@ -1181,7 +1183,6 @@ style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kPrima
     );
   }
 }
-
 
 // ─── Card de serviço para o catálogo (vertical, sem acções CRUD) ──────────────
 class _ServicoCardCatalogo extends StatelessWidget {
@@ -1197,10 +1198,12 @@ class _ServicoCardCatalogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Card(
-      color: Colors.white,
+      color: c.superficie,
       elevation: 2,
-margin: EdgeInsets.zero,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -1209,79 +1212,80 @@ margin: EdgeInsets.zero,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Banner de cabeçalho
- Container(
-  width: double.infinity,
-  padding: const EdgeInsets.symmetric(vertical: 8),  // era 10
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: [_kPrimary, _kPrimary.withBlue(140)],
-    ),
-    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-  ),
-  child: const Icon(Icons.miscellaneous_services, color: Colors.white, size: 18),  // era 22
-),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8), // era 10
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.azulMarca, AppColors.azulMarca.withBlue(140)],
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+              child: const Icon(Icons.miscellaneous_services, color: AppColors.branco, size: 18), // era 22
+            ),
 
             // Informações
             Padding(
-  padding: const EdgeInsets.fromLTRB(7, 4, 7, 4),  // era all(7)
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,       // ← impede expansão desnecessária
-    children: [
-      Text(servico.nomeServico,
-          maxLines: 1,                   // era 2
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontSize: 11,              // era 14
-              fontWeight: FontWeight.w700,
-              color: _kPrimary)),
-      if (servico.descricao != null && servico.descricao!.isNotEmpty) ...[
-        const SizedBox(height: 2),       // era 4
-        Text(servico.descricao!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 9, color: Colors.grey[500])),
-      ],
-      const SizedBox(height: 4),         // era 8
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Text(
-              currencyFmt.format(servico.precoUnitario),
-              style: const TextStyle(
-                  fontSize: 11,          // era 15
-                  fontWeight: FontWeight.bold,
-                  color: _kPrimary),
-              overflow: TextOverflow.ellipsis,
+              padding: const EdgeInsets.fromLTRB(7, 4, 7, 4), // era all(7)
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // ← impede expansão desnecessária
+                children: [
+                  Text(servico.nomeServico,
+                      maxLines: 1, // era 2
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 11, // era 14
+                          fontWeight: FontWeight.w700,
+                          color: c.marca)),
+                  if (servico.descricao != null && servico.descricao!.isNotEmpty) ...[
+                    const SizedBox(height: 2), // era 4
+                    Text(servico.descricao!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 9, color: c.textoSecundario)),
+                  ],
+                  const SizedBox(height: 4), // era 8
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          currencyFmt.format(servico.precoUnitario),
+                          style: TextStyle(
+                              fontSize: 11, // era 15
+                              fontWeight: FontWeight.bold,
+                              color: c.marca),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: c.marca.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          servico.unidade, // remove "por " para ganhar espaço
+                          style: TextStyle(
+                              fontSize: 9, // era 11
+                              color: c.marca,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: _kPrimary.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              servico.unidade,           // remove "por " para ganhar espaço
-              style: const TextStyle(
-                  fontSize: 9,           // era 11
-                  color: _kPrimary,
-                  fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    ),
-  ],
-),
-),
           ],
         ),
       ),
     );
   }
 }
+
 // ─── Linha de produto na tabela ───────────────────────────────────────────────
 class _ProdutoLinhaTabela extends StatelessWidget {
   const _ProdutoLinhaTabela({
@@ -1300,12 +1304,13 @@ class _ProdutoLinhaTabela extends StatelessWidget {
   Widget build(BuildContext context) {
     final temPromo   = produto.precoPromocional != null;
     final semEstoque = produto.quantidadeEstoque <= 0;
+    final c = context.cores;
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0), width: 1),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(
+          bottom: BorderSide(color: c.borda, width: 1),
         ),
       ),
       child: InkWell(
@@ -1321,10 +1326,10 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                   produto.nomeProduto,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1B2A6B),
+                    color: c.marca,
                   ),
                 ),
               ),
@@ -1336,7 +1341,7 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                   currencyFmt.format(produto.preco),
                   style: TextStyle(
                     fontSize: 12,
-                    color: temPromo ? Colors.grey : const Color(0xFF1B2A6B),
+                    color: temPromo ? c.textoSecundario : c.marca,
                     fontWeight: FontWeight.w500,
                     decoration: temPromo ? TextDecoration.lineThrough : null,
                   ),
@@ -1351,9 +1356,9 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                         children: [
                           Text(
                             currencyFmt.format(produto.precoPromocional),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFFC8102E),
+                              color: c.acentoTexto,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -1361,15 +1366,15 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFC8102E),
+                              color: AppColors.vermelhoMarca,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text('PROMO',
-                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800)),
+                                style: TextStyle(color: AppColors.branco, fontSize: 8, fontWeight: FontWeight.w800)),
                           ),
                         ],
                       )
-                    : Text('—', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                    : Text('—', style: TextStyle(color: c.desactivado, fontSize: 12)),
               ),
 
               // Estoque
@@ -1380,14 +1385,14 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                     Icon(
                       semEstoque ? Icons.warning_amber_rounded : Icons.check_circle_outline,
                       size: 14,
-                      color: semEstoque ? Colors.red : Colors.green[600],
+                      color: semEstoque ? c.perigo : c.sucesso,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       semEstoque ? 'Esgotado' : '${produto.quantidadeEstoque}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: semEstoque ? Colors.red : Colors.grey[700],
+                        color: semEstoque ? c.perigo : c.icone,
                         fontWeight: semEstoque ? FontWeight.w700 : FontWeight.normal,
                       ),
                     ),
@@ -1407,7 +1412,7 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                 child: TextButton(
                   onPressed: onTap,
                   style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B2A6B),
+                    backgroundColor: c.marcaBotao,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     minimumSize: Size.zero,
@@ -1415,7 +1420,7 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                   ),
                   child: const Text(
                     'Detalhes',
-                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.branco, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -1443,11 +1448,13 @@ class _ServicoLinhaTabela extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0), width: 1),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(
+          bottom: BorderSide(color: c.borda, width: 1),
         ),
       ),
       child: InkWell(
@@ -1465,10 +1472,10 @@ class _ServicoLinhaTabela extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1B2A6B).withOpacity(0.08),
+                        color: c.marca.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.miscellaneous_services, size: 16, color: Color(0xFF1B2A6B)),
+                      child: Icon(Icons.miscellaneous_services, size: 16, color: c.marca),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1476,10 +1483,10 @@ class _ServicoLinhaTabela extends StatelessWidget {
                         servico.nomeServico,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1B2A6B),
+                          color: c.marca,
                         ),
                       ),
                     ),
@@ -1494,7 +1501,7 @@ class _ServicoLinhaTabela extends StatelessWidget {
                   servico.descricao ?? '—',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: c.textoSecundario),
                 ),
               ),
 
@@ -1503,10 +1510,10 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 flex: 2,
                 child: Text(
                   currencyFmt.format(servico.precoUnitario),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1B2A6B),
+                    color: c.marca,
                   ),
                 ),
               ),
@@ -1517,14 +1524,14 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: c.infoFundo,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.blue.shade200),
+                    border: Border.all(color: c.info.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     servico.unidade,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 10, color: c.info, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -1541,7 +1548,7 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 child: TextButton(
                   onPressed: onTap,
                   style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B2A6B),
+                    backgroundColor: c.marcaBotao,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     minimumSize: Size.zero,
@@ -1549,7 +1556,7 @@ class _ServicoLinhaTabela extends StatelessWidget {
                   ),
                   child: const Text(
                     'Detalhes',
-                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.branco, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -1575,125 +1582,124 @@ class _FiltroPrecoRow extends StatelessWidget {
   final double precoMaxAbsoluto;
   final void Function(double min, double max) onChanged;
 
-  // SUBSTITUIR o método build de _FiltroPrecoRow por:
-@override
-Widget build(BuildContext context) {
-  final fmt = NumberFormat.compactCurrency(locale: 'pt_PT', symbol: 'MZN');
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat.compactCurrency(locale: 'pt_PT', symbol: 'MZN');
+    final c = context.cores;
 
-  // Garante que os valores nunca excedem os limites
-  final safeMin = precoMin.clamp(0.0, precoMaxAbsoluto);
-  final safeMax = precoMax.clamp(safeMin, precoMaxAbsoluto);
-  final ativo = safeMin > 0 || safeMax < precoMaxAbsoluto;
+    // Garante que os valores nunca excedem os limites
+    final safeMin = precoMin.clamp(0.0, precoMaxAbsoluto);
+    final safeMax = precoMax.clamp(safeMin, precoMaxAbsoluto);
+    final ativo = safeMin > 0 || safeMax < precoMaxAbsoluto;
 
-  return GestureDetector(
-    onTap: () => _abrirModal(context),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: ativo ? _kPrimary : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ativo ? _kPrimary : Colors.grey.shade300),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.tune, size: 15, color: ativo ? Colors.white : Colors.grey[600]),
-        const SizedBox(width: 5),
-        Text(
-          ativo
-              ? '${fmt.format(safeMin)} – ${fmt.format(safeMax)}'
-              : 'Faixa de Preço',
-          style: TextStyle(
-            fontSize: 12,
-            color: ativo ? Colors.white : Colors.grey[700],
-            fontWeight: FontWeight.w500,
-          ),
+    return GestureDetector(
+      onTap: () => _abrirModal(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: ativo ? c.marcaBotao : c.superficie,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ativo ? c.marcaBotao : c.borda),
         ),
-        if (ativo) ...[
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: () => onChanged(0, precoMaxAbsoluto),
-            child: const Icon(Icons.close, size: 13, color: Colors.white),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.tune, size: 15, color: ativo ? AppColors.branco : c.textoSecundario),
+          const SizedBox(width: 5),
+          Text(
+            ativo
+                ? '${fmt.format(safeMin)} – ${fmt.format(safeMax)}'
+                : 'Faixa de Preço',
+            style: TextStyle(
+              fontSize: 12,
+              color: ativo ? AppColors.branco : c.icone,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ],
-      ]),
-    ),
-  );
-}
+          if (ativo) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: () => onChanged(0, precoMaxAbsoluto),
+              child: const Icon(Icons.close, size: 13, color: AppColors.branco),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
 
- // SUBSTITUIR _abrirModal por:
-void _abrirModal(BuildContext context) {
-  // Clamp ao abrir para evitar assertion no RangeSlider
-  double tempMin = precoMin.clamp(0.0, precoMaxAbsoluto);
-  double tempMax = precoMax.clamp(tempMin, precoMaxAbsoluto);
+  void _abrirModal(BuildContext context) {
+    // Clamp ao abrir para evitar assertion no RangeSlider
+    double tempMin = precoMin.clamp(0.0, precoMaxAbsoluto);
+    double tempMax = precoMax.clamp(tempMin, precoMaxAbsoluto);
 
-  // Se max absoluto for 0, não há nada a filtrar
-  if (precoMaxAbsoluto <= 0) return;
+    // Se max absoluto for 0, não há nada a filtrar
+    if (precoMaxAbsoluto <= 0) return;
 
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-    // Resolve o erro de "multiple heroes" no modal
-    useSafeArea: true,
-    builder: (_) => StatefulBuilder(
-      builder: (ctx, setModal) {
-        final fmt2 = NumberFormat.currency(locale: 'pt_PT', symbol: 'MZN');
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Faixa de Preço',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _kPrimary)),
-              const SizedBox(height: 12),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(fmt2.format(tempMin),
-                    style: const TextStyle(fontSize: 12)),
-                Text(fmt2.format(tempMax),
-                    style: const TextStyle(fontSize: 12)),
-              ]),
-              RangeSlider(
-                values: RangeValues(tempMin, tempMax),
-                min: 0,
-                max: precoMaxAbsoluto,
-                divisions: precoMaxAbsoluto > 0
-                    ? (precoMaxAbsoluto / 100).ceil().clamp(1, 100)
-                    : 1,
-                activeColor: _kPrimary,
-                inactiveColor: _kPrimary.withOpacity(0.15),
-                onChanged: (v) {
-                  setModal(() {
-                    tempMin = v.start;
-                    tempMax = v.end;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: _kPrimary),
-                  onPressed: () {
-                    onChanged(tempMin, tempMax);
-                    Navigator.pop(ctx);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      // Resolve o erro de "multiple heroes" no modal
+      useSafeArea: true,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          final fmt2 = NumberFormat.currency(locale: 'pt_PT', symbol: 'MZN');
+          final c = ctx.cores;
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Faixa de Preço',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: c.marca)),
+                const SizedBox(height: 12),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text(fmt2.format(tempMin),
+                      style: const TextStyle(fontSize: 12)),
+                  Text(fmt2.format(tempMax),
+                      style: const TextStyle(fontSize: 12)),
+                ]),
+                RangeSlider(
+                  values: RangeValues(tempMin, tempMax),
+                  min: 0,
+                  max: precoMaxAbsoluto,
+                  divisions: precoMaxAbsoluto > 0
+                      ? (precoMaxAbsoluto / 100).ceil().clamp(1, 100)
+                      : 1,
+                  activeColor: c.marca,
+                  inactiveColor: c.marca.withValues(alpha: 0.15),
+                  onChanged: (v) {
+                    setModal(() {
+                      tempMin = v.start;
+                      tempMax = v.end;
+                    });
                   },
-                  child: const Text('Aplicar',
-                      style: TextStyle(color: Colors.white)),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: c.marcaBotao),
+                    onPressed: () {
+                      onChanged(tempMin, tempMax);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Aplicar',
+                        style: TextStyle(color: AppColors.branco)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1720,7 +1726,7 @@ Future<bool> _confirmarDialog(
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: corBotao,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.branco,
           ),
           onPressed: () => Navigator.pop(context, true),
           child: Text(labelBotao),
@@ -1729,14 +1735,12 @@ Future<bool> _confirmarDialog(
     ),
   );
   return result ?? false;
-
-  
-
-  
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BADGE DE PEDIDOS ABERTOS (AppBar)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// catalogo_screen.dart — adicionar ao final do arquivo:
 class _BadgePedidosAbertos extends StatefulWidget {
   const _BadgePedidosAbertos();
 
@@ -1779,7 +1783,8 @@ class _BadgePedidosAbertosState extends State<_BadgePedidosAbertos> {
           count++;
         }
 
-        final badgeColor = creditoEmEdicao ? Colors.amber[700]! : _kAccent;
+        final badgeColor =
+            creditoEmEdicao ? Colors.amber[700]! : AppColors.vermelhoMarca;
 
         return IconButton(
           tooltip: creditoEmEdicao
@@ -1803,7 +1808,7 @@ class _BadgePedidosAbertosState extends State<_BadgePedidosAbertos> {
               count > 99 ? '99+' : '$count',
               style: const TextStyle(
                 fontSize: 10,
-                color: Colors.white,
+                color: AppColors.branco,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1819,6 +1824,10 @@ class _BadgePedidosAbertosState extends State<_BadgePedidosAbertos> {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BANNER DE EDIÇÃO DE CRÉDITO
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class _BannerEdicaoCredito extends StatelessWidget {
   const _BannerEdicaoCredito();
@@ -1877,10 +1886,10 @@ class _BannerEdicaoCredito extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          title: const Text(
+                          title: Text(
                             'Sair da edição?',
                             style: TextStyle(
-                              color: _kPrimary,
+                              color: ctx.cores.marca,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1896,7 +1905,7 @@ class _BannerEdicaoCredito extends StatelessWidget {
                               onPressed: () => Navigator.pop(ctx, true),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.amber[700],
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppColors.branco,
                               ),
                               child: const Text('Sair da edição'),
                             ),

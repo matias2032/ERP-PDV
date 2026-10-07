@@ -1,3 +1,5 @@
+// lib/screens/finalizar_pedido.dart
+
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/api_config.dart';
@@ -5,10 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-
-const _kPrimary    = Color.fromARGB(255, 58, 62, 79);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
+import '../theme/app_theme.dart';
 
 class FinalizarPedidoScreen extends StatefulWidget {
   final PedidoModel pedido;
@@ -337,14 +336,14 @@ final apelidoSingularFinal = usarClienteSingular
       debugPrint(
         '❌ FinalizacaoScreen._finalizar — erro vindo do provider: ${provider.errorMessage}',
       );
-      _snack('Erro: ${provider.errorMessage}', _kAccent);
+      _snack('Erro: ${provider.errorMessage}', AppColors.vermelhoMarca);
     }
   } catch (e, s) {
     debugPrint('❌ FinalizacaoScreen._finalizar — exception inesperada: $e');
     debugPrint('$s');
 
     if (mounted) {
-      _snack('Erro ao finalizar pedido: $e', _kAccent);
+      _snack('Erro ao finalizar pedido: $e', AppColors.vermelhoMarca);
     }
   } finally {
     if (mounted) {
@@ -420,7 +419,7 @@ context.read<PedidoProvider>().limparPedidoActual();
 
 Navigator.pop(context, true);
   } catch (e) {
-    if (mounted) _snack('Erro ao finalizar a crédito: $e', _kAccent);
+    if (mounted) _snack('Erro ao finalizar a crédito: $e', AppColors.vermelhoMarca);
   } finally {
     if (mounted) setState(() => _finalizando = false);
   }
@@ -444,17 +443,19 @@ Navigator.pop(context, true);
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: c.fundo,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
           SliverToBoxAdapter(
             child: _carregando
-                ? const SizedBox(
+                ? SizedBox(
                     height: 300,
                     child: Center(
-                        child: CircularProgressIndicator(color: _kPrimary)))
+                        child: CircularProgressIndicator(color: c.marca)))
                 : Padding(
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
                     child: Column(
@@ -494,12 +495,13 @@ _buildBotao(),
     return SliverAppBar(
       pinned: true,
       expandedHeight: 110,
-      backgroundColor: _kPrimary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+            color: AppColors.branco.withValues(alpha: 0.15),
+            shape: BoxShape.circle),
         child: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context)),
@@ -510,7 +512,10 @@ _buildBotao(),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [_kPrimary, _kPrimary.withBlue(140)],
+              colors: [
+                AppColors.azulMarca,
+                AppColors.azulMarca.withBlue(140),
+              ],
             ),
           ),
           child: Align(
@@ -521,11 +526,11 @@ _buildBotao(),
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: AppColors.branco.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.check_circle_outline,
-                      color: Colors.white, size: 20),
+                      color: AppColors.branco, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -533,13 +538,13 @@ _buildBotao(),
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 Text(_modoCredito ? 'Finalizar a Crédito' : 'Finalizar Pedido',
-                        style: TextStyle(
-                            color: Colors.white,
+                        style: const TextStyle(
+                            color: AppColors.branco,
                             fontSize: 16,
                             fontWeight: FontWeight.bold)),
                     Text(widget.pedido.referencia,
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.75),
+                            color: AppColors.branco.withValues(alpha: 0.75),
                             fontSize: 12)),
                   ],
                 ),
@@ -554,6 +559,7 @@ Text(_modoCredito ? 'Finalizar a Crédito' : 'Finalizar Pedido',
   // ─── Resumo ───────────────────────────────────────────────────────────────
 
   Widget _buildResumoCard() {
+    final c = context.cores;
     return _card(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,16 +573,16 @@ Text(_modoCredito ? 'Finalizar a Crédito' : 'Finalizar Pedido',
                 '${i.quantidade}× ${i.nomeServico ?? 'Serviço'}', i.subtotal)),
         const Divider(height: 14),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Total',
+          Text('Total',
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
-                  color: _kPrimary)),
+                  color: c.marca)),
           Text(_currencyFmt.format(widget.pedido.total),
-              style: const TextStyle(
+              style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 17,
-                  color: _kPrimary)),
+                  color: c.marca)),
         ]),
       ],
     ));
@@ -585,6 +591,8 @@ Text(_modoCredito ? 'Finalizar a Crédito' : 'Finalizar Pedido',
   // ─── Cliente ──────────────────────────────────────────────────────────────
 
 Widget _buildClienteCard() {
+  final c = context.cores;
+
   if (_modoCredito && !_clienteBloqueado) {
     return _card(
       child: Column(
@@ -598,7 +606,7 @@ Widget _buildClienteCard() {
             icon: Icons.info_outline,
             texto:
                 'Venda a crédito exige cliente cadastrado para permitir extracto, pagamentos e cobranças.',
-            cor: _kPrimary,
+            cor: c.marca,
           ),
         ],
       ),
@@ -621,16 +629,16 @@ Widget _buildClienteCard() {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: _kPrimary.withOpacity(0.05),
+                    color: c.marca.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _kPrimary.withOpacity(0.15)),
+                    border: Border.all(color: c.marca.withValues(alpha: 0.15)),
                   ),
                   child: Text(
                     _nomeClienteBloqueado ?? '—',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: _kPrimary,
+                      color: c.marca,
                     ),
                   ),
                 ),
@@ -647,7 +655,7 @@ Widget _buildClienteCard() {
                     'Alterar',
                     style: TextStyle(fontSize: 12),
                   ),
-                  style: TextButton.styleFrom(foregroundColor: _kPrimary),
+                  style: TextButton.styleFrom(foregroundColor: c.marca),
                 ),
             ],
           ),
@@ -684,6 +692,7 @@ Widget _buildClienteCard() {
 }
 
   Widget _toggleBtn(String tipo, IconData icon, String label) {
+    final c = context.cores;
     final sel = _tipoCliente == tipo;
     return GestureDetector(
    onTap: () => setState(() {
@@ -698,18 +707,20 @@ Widget _buildClienteCard() {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: sel ? _kPrimary : Colors.grey[100],
+          color: sel ? c.marcaBotao : c.fundo,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: sel ? _kPrimary : Colors.grey.shade300),
+          border: Border.all(color: sel ? c.marcaBotao : c.borda),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, size: 15, color: sel ? Colors.white : Colors.grey[600]),
+          Icon(icon,
+              size: 15,
+              color: sel ? AppColors.branco : c.textoSecundario),
           const SizedBox(width: 5),
           Text(label,
               style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
-                  color: sel ? Colors.white : Colors.grey[600])),
+                  color: sel ? AppColors.branco : c.textoSecundario)),
         ]),
       ),
     );
@@ -721,7 +732,7 @@ Widget _buildClienteCard() {
         key: const ValueKey('sem-empresas'),
         icon: Icons.info_outline,
         texto: 'Nenhuma empresa cadastrada.',
-        cor: Colors.orange,
+        cor: context.cores.aviso,
       );
     }
     return DropdownButtonFormField<ClienteModel>(
@@ -741,6 +752,7 @@ Widget _buildClienteCard() {
 
 
 Widget _buildSingularFields() {
+  final c = context.cores;
   final bloqueado = _clienteSingularBloqueado;
 
   return Column(
@@ -769,16 +781,16 @@ Widget _buildSingularFields() {
             Container(
               height: 42,
               decoration: BoxDecoration(
-                color: _kPrimary.withOpacity(0.08),
+                color: c.marca.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _kPrimary.withOpacity(0.20)),
+                border: Border.all(color: c.marca.withValues(alpha: 0.20)),
               ),
               child: IconButton(
                 tooltip: 'Editar cliente',
-                icon: const Icon(
+                icon: Icon(
                   Icons.edit_outlined,
                   size: 18,
-                  color: _kPrimary,
+                  color: c.marca,
                 ),
                 onPressed: () {
                   setState(() {
@@ -793,14 +805,14 @@ Widget _buildSingularFields() {
       const SizedBox(height: 5),
       Row(
         children: [
-          Icon(Icons.info_outline, size: 11, color: Colors.grey[400]),
+          Icon(Icons.info_outline, size: 11, color: c.textoSecundario),
           const SizedBox(width: 4),
           Expanded(
             child: Text(
               bloqueado
                   ? 'Cliente vindo da cotação. Clique no lápis para editar.'
                   : 'Cliente não será cadastrado na base de dados.',
-              style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+              style: TextStyle(fontSize: 10, color: c.textoSecundario),
             ),
           ),
         ],
@@ -812,17 +824,19 @@ Widget _buildSingularFields() {
   // ─── Pagamento ────────────────────────────────────────────────────────────
 
   Color _corPagamento(int id) {
+    final c = context.cores;
     switch (id) {
-      case 1: return const Color(0xFF2E7D32);
-      case 2: return const Color(0xFF1565C0);
-      
-      case 3: return const Color(0xFFE53935);
-      case 4: return const Color(0xFFFF8C00);
-      default: return _kPrimary;
+      case 1: return c.sucesso;
+      case 2: return c.info;
+
+      case 3: return c.perigo;
+      case 4: return c.aviso;
+      default: return c.marca;
     }
   }
 
   Widget _buildEntradaCreditoCard() {
+  final c = context.cores;
   return _card(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -832,16 +846,16 @@ Widget _buildSingularFields() {
         TextField(
           controller: _valorPagoCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: _kPrimary,
+            color: c.marca,
           ),
           decoration: _inputDecoration('0.00').copyWith(
             labelText: 'Valor pago agora (opcional)',
-            labelStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+            labelStyle: TextStyle(color: c.textoSecundario, fontSize: 13),
             prefixText: 'MZN  ',
-            prefixStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+            prefixStyle: TextStyle(color: c.textoSecundario, fontSize: 14),
           ),
           onChanged: (_) => setState(() {}),
         ),
@@ -849,7 +863,7 @@ Widget _buildSingularFields() {
         _infoBox(
           icon: Icons.info_outline,
           texto: 'Deixe 0 caso o cliente não pague nenhuma entrada agora.',
-          cor: _kPrimary,
+          cor: c.marca,
         ),
       ],
     ),
@@ -857,6 +871,7 @@ Widget _buildSingularFields() {
 }
 
   Widget _buildPagamentoCard() {
+    final c = context.cores;
     return _card(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -885,18 +900,18 @@ _secLabel(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
-                  color: sel ? cor.withOpacity(0.10) : Colors.white,
+                  color: sel ? cor.withValues(alpha: 0.10) : c.superficie,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: sel
-                        ? cor.withOpacity(0.65)
-                        : Colors.grey.shade300,
+                        ? cor.withValues(alpha: 0.65)
+                        : c.borda,
                     width: sel ? 1.6 : 1.0,
                   ),
                   boxShadow: sel
                       ? [
                           BoxShadow(
-                              color: cor.withOpacity(0.15),
+                              color: cor.withValues(alpha: 0.15),
                               blurRadius: 8,
                               offset: const Offset(0, 3))
                         ]
@@ -912,14 +927,14 @@ _secLabel(
                                 ? Icons.phone_android_rounded
                                 : Icons.account_balance_wallet_rounded,
                     size: 15,
-                    color: sel ? cor : Colors.grey,
+                    color: sel ? cor : c.textoSecundario,
                   ),
                   const SizedBox(width: 6),
                   Text(t.tipoPagamento,
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: sel ? cor : Colors.grey[700])),
+                          color: sel ? cor : c.icone)),
                   if (sel) ...[
                     const SizedBox(width: 5),
                     Icon(Icons.check_circle_rounded,
@@ -939,16 +954,16 @@ child: (!_modoCredito && _ehDinheiro)
         TextField(
           controller: _valorPagoCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: _kPrimary,
+            color: c.marca,
           ),
           decoration: _inputDecoration('0.00').copyWith(
             labelText: 'Valor recebido',
-            labelStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+            labelStyle: TextStyle(color: c.textoSecundario, fontSize: 13),
             prefixText: 'MZN  ',
-            prefixStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+            prefixStyle: TextStyle(color: c.textoSecundario, fontSize: 14),
           ),
           onChanged: (_) => setState(() {}),
         ),
@@ -962,13 +977,14 @@ child: (!_modoCredito && _ehDinheiro)
   // ─── Troco / Dívida ───────────────────────────────────────────────────────
 
   Widget _buildTrocoCard() {
-    final cor = _emDivida ? _kAccent : Colors.green;
+    final c = context.cores;
+    final cor = _emDivida ? c.acentoTexto : c.sucesso;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withOpacity(0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -999,14 +1015,15 @@ child: (!_modoCredito && _ehDinheiro)
   }
 
   Widget _buildSaldoCreditoCard() {
-  final cor = _saldoCredito <= 0 ? Colors.green : _kAccent;
+  final c = context.cores;
+  final cor = _saldoCredito <= 0 ? c.sucesso : c.acentoTexto;
 
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
     decoration: BoxDecoration(
-      color: cor.withOpacity(0.07),
+      color: cor.withValues(alpha: 0.07),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: cor.withOpacity(0.25)),
+      border: Border.all(color: cor.withValues(alpha: 0.25)),
     ),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1039,6 +1056,7 @@ child: (!_modoCredito && _ehDinheiro)
   // ─── Botão ────────────────────────────────────────────────────────────────
 
 Widget _buildBotao() {
+  final c = context.cores;
   final activo = _podeFinalizar && !_finalizando;
 
   String texto;
@@ -1067,7 +1085,7 @@ Widget _buildBotao() {
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: AppColors.branco,
               ),
             )
           : Icon(
@@ -1083,8 +1101,8 @@ Widget _buildBotao() {
         overflow: TextOverflow.ellipsis,
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: activo ? _kPrimary : Colors.grey[300],
-        foregroundColor: activo ? Colors.white : Colors.grey[600],
+        backgroundColor: activo ? c.marcaBotao : c.borda,
+        foregroundColor: activo ? AppColors.branco : c.textoSecundario,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: activo ? 3 : 0,
       ),
@@ -1096,80 +1114,91 @@ Widget _buildBotao() {
 
   Widget _card({required Widget child}) => Card(
         elevation: 0,
-        color: Colors.white,
+        color: context.cores.superficie,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(padding: const EdgeInsets.all(12), child: child),
       );
 
-  Widget _secLabel(IconData icon, String texto) => Row(children: [
-        Icon(icon, size: 14, color: _kPrimary),
-        const SizedBox(width: 6),
-        Text(texto,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: _kPrimary)),
-      ]);
+  Widget _secLabel(IconData icon, String texto) {
+    final c = context.cores;
+    return Row(children: [
+      Icon(icon, size: 14, color: c.marca),
+      const SizedBox(width: 6),
+      Text(texto,
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: c.marca)),
+    ]);
+  }
 
-  Widget _linhaItem(String nome, double subtotal) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-                child: Text(nome,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                    overflow: TextOverflow.ellipsis)),
-            Text(_currencyFmt.format(subtotal),
-                style: const TextStyle(fontSize: 12, color: _kPrimary)),
-          ],
-        ),
-      );
+  Widget _linhaItem(String nome, double subtotal) {
+    final c = context.cores;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+              child: Text(nome,
+                  style: TextStyle(fontSize: 12, color: c.icone),
+                  overflow: TextOverflow.ellipsis)),
+          Text(_currencyFmt.format(subtotal),
+              style: TextStyle(fontSize: 12, color: c.marca)),
+        ],
+      ),
+    );
+  }
 
 Widget _textField(
   TextEditingController ctrl,
   String hint, {
   bool enabled = true,
-}) =>
-    TextField(
-      controller: ctrl,
-      enabled: enabled,
-      style: TextStyle(
-        fontSize: 13,
-        color: enabled ? Colors.black87 : _kPrimary,
-        fontWeight: enabled ? FontWeight.normal : FontWeight.w600,
+}) {
+  final c = context.cores;
+  return TextField(
+    controller: ctrl,
+    enabled: enabled,
+    style: TextStyle(
+      fontSize: 13,
+      color: enabled ? c.textoPrincipal : c.marca,
+      fontWeight: enabled ? FontWeight.normal : FontWeight.w600,
+    ),
+    decoration: _inputDecoration(hint).copyWith(
+      fillColor: enabled ? c.fundo : c.marca.withValues(alpha: 0.05),
+      suffixIcon: enabled
+          ? null
+          : Icon(
+              Icons.lock_outline_rounded,
+              size: 15,
+              color: c.marca,
+            ),
+    ),
+  );
+}
+
+  InputDecoration _inputDecoration(String hint) {
+    final c = context.cores;
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: c.textoSecundario, fontSize: 12),
+      filled: true,
+      fillColor: c.fundo,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide:
+            BorderSide(color: c.marca.withValues(alpha: 0.15)),
       ),
-      decoration: _inputDecoration(hint).copyWith(
-        fillColor: enabled ? _kBackground : _kPrimary.withOpacity(0.05),
-        suffixIcon: enabled
-            ? null
-            : const Icon(
-                Icons.lock_outline_rounded,
-                size: 15,
-                color: _kPrimary,
-              ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide:
+            BorderSide(color: c.marca.withValues(alpha: 0.15)),
       ),
     );
-
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
-        filled: true,
-        fillColor: _kBackground,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide:
-              BorderSide(color: _kPrimary.withOpacity(0.15)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide:
-              BorderSide(color: _kPrimary.withOpacity(0.15)),
-        ),
-      );
+  }
 
   Widget _infoBox({
     Key? key,
@@ -1182,9 +1211,9 @@ Widget _textField(
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: cor.withOpacity(0.07),
+          color: cor.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cor.withOpacity(0.25)),
+          border: Border.all(color: cor.withValues(alpha: 0.25)),
         ),
         child: Row(children: [
           Icon(icon, size: 14, color: cor),

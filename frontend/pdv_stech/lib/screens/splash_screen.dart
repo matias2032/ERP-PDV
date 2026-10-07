@@ -11,11 +11,7 @@ import 'package:api_compartilhado/core/database/daos/servico_dao.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:api_compartilhado/core/database/daos/cliente_dao.dart';
 import 'package:flutter/foundation.dart'; // para kDebugMode
-
-// ── Paleta STech ─────────────────────────────────────────────────────
-const _navy   = Color.fromARGB(255, 58, 62, 79);
-const _red    = Color.fromARGB(255, 200, 16, 46);
-const _bg     = Color.fromARGB(255, 244, 245, 247);
+import '../theme/app_theme.dart';
 
 // ── Configuração ─────────────────────────────────────────────────────
 const _kHealthTimeout  = Duration(seconds: 8);
@@ -58,6 +54,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     
   }
+
+  // ── Cor de texto "suave" ──────────────────────────────────────────
+  // Claro: azul da marca com transparência (idêntico ao original).
+  // Escuro: texto secundário do tema (contraste ≥ 4.5:1).
+  Color _marcaSuave(double alpha) => context.escuro
+      ? context.cores.textoSecundario
+      : context.cores.marca.withValues(alpha: alpha);
 
   // ── Animações ─────────────────────────────────────────────────────
 
@@ -483,7 +486,7 @@ try {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.cores.fundo,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -526,17 +529,17 @@ try {
             width: 110,
             height: 110,
             decoration: BoxDecoration(
-              color: _navy,
+              color: AppColors.azulMarca,
               borderRadius: BorderRadius.circular(26),
               boxShadow: [
                 BoxShadow(
-                  color: _navy.withOpacity(.35),
+                  color: AppColors.azulMarca.withValues(alpha: .35),
                   blurRadius: 28,
                   offset: const Offset(0, 10),
                 ),
               ],
               border: Border.all(
-                  color: Colors.white.withOpacity(.12), width: 1.5),
+                  color: Colors.white.withValues(alpha: .12), width: 1.5),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
@@ -562,13 +565,13 @@ try {
         position: _textSlide,
         child: Column(
           children: [
-            const Text(
-              'ERP & PDV',
+            Text(
+              'Gestor STech',
               style: TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                color: Color.fromARGB(255, 58, 62, 79),
+                color: context.cores.marca,
                 letterSpacing: .4,
               ),
             ),
@@ -577,7 +580,7 @@ try {
               'Sistema de Gestão de Pedidos',
               style: TextStyle(
                 fontSize: 13,
-                color: const Color.fromARGB(255, 58, 62, 79).withOpacity(.5),
+                color: _marcaSuave(.5),
                 letterSpacing: .5,
               ),
             ),
@@ -592,30 +595,39 @@ try {
   Widget _buildConnBadge() {
     if (_connMode == _ConnMode.desconhecido) return const SizedBox.shrink();
 
+    final e = context.escuro;
+    final c = context.cores;
+
     final cfg = switch (_connMode) {
       _ConnMode.online => (
           icon: Icons.cloud_done_rounded,
           label: 'Online',
           sub: 'Servidor disponível',
-          bg: const Color(0xFFECFDF5),
-          border: const Color(0xFF6EE7B7),
-          fg: const Color(0xFF065F46),
+          bg: e ? c.sucessoFundo : const Color(0xFFECFDF5),
+          border: e
+              ? c.sucesso.withValues(alpha: .5)
+              : const Color(0xFF6EE7B7),
+          fg: e ? c.sucesso : const Color(0xFF065F46),
         ),
       _ConnMode.offlineFirst => (
           icon: Icons.cloud_sync_rounded,
           label: 'Offline-First',
           sub: 'A usar dados locais — sincroniza quando o servidor voltar',
-          bg: const Color(0xFFFFFBEB),
-          border: const Color(0xFFFCD34D),
-          fg: const Color(0xFF92400E),
+          bg: e ? c.avisoFundo : const Color(0xFFFFFBEB),
+          border: e
+              ? c.aviso.withValues(alpha: .5)
+              : const Color(0xFFFCD34D),
+          fg: e ? c.aviso : const Color(0xFF92400E),
         ),
       _ConnMode.fullOffline => (
           icon: Icons.wifi_off_rounded,
           label: 'Sem ligação',
           sub: 'A usar cache local — sem acesso à rede',
-          bg: const Color(0xFFFEF2F2),
-          border: const Color(0xFFFCA5A5),
-          fg: const Color(0xFF991B1B),
+          bg: e ? c.perigoFundo : const Color(0xFFFEF2F2),
+          border: e
+              ? c.perigo.withValues(alpha: .5)
+              : const Color(0xFFFCA5A5),
+          fg: e ? c.perigo : const Color(0xFF991B1B),
         ),
       _ConnMode.desconhecido => (
           icon: Icons.help_outline,
@@ -655,7 +667,7 @@ try {
                   Text(cfg.sub,
                       style: TextStyle(
                           fontSize: 11,
-                          color: cfg.fg.withOpacity(.8),
+                          color: cfg.fg.withValues(alpha: .8),
                           height: 1.4)),
                 ],
               ),
@@ -673,15 +685,13 @@ try {
     return _buildProgressArea();
   }
 
-
-
   Widget _buildProgressArea() {
     return Column(
       children: [
         Container(
           height: 4,
           decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 58, 62, 79).withOpacity(.10),
+            color: context.cores.marca.withValues(alpha: .10),
             borderRadius: BorderRadius.circular(4),
           ),
           child: LayoutBuilder(
@@ -694,7 +704,7 @@ try {
                   decoration: BoxDecoration(
                     color: _barProgress == 1.0
                         ? Colors.green[600]
-                        : _red,
+                        : AppColors.vermelhoMarca,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -711,11 +721,12 @@ try {
             children: [
               if (_state == _SplashState.carregando &&
                   _barProgress < 1.0)
-                const SizedBox(
+                SizedBox(
                   width: 12,
                   height: 12,
                   child: CircularProgressIndicator(
-                      strokeWidth: 1.8, color: _red),
+                      strokeWidth: 1.8,
+                      color: context.cores.acentoTexto),
                 ),
               if (_barProgress == 1.0)
                 const Icon(Icons.check_circle_outline,
@@ -727,7 +738,7 @@ try {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: _navy.withOpacity(.6),
+                    color: _marcaSuave(.6),
                     letterSpacing: .3,
                   ),
                 ),
@@ -740,26 +751,32 @@ try {
   }
 
   Widget _buildErrorArea() {
+    final e = context.escuro;
+    final c = context.cores;
+
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFEF2F2),
+            color: e ? c.perigoFundo : const Color(0xFFFEF2F2),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFECACA)),
+            border: Border.all(
+                color: e
+                    ? c.perigo.withValues(alpha: .5)
+                    : const Color(0xFFFECACA)),
           ),
           child: Column(
             children: [
-              const Icon(Icons.cloud_off_rounded, color: _red, size: 28),
+              Icon(Icons.cloud_off_rounded, color: c.acentoTexto, size: 28),
               const SizedBox(height: 10),
               Text(
                 _statusMsg,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF991B1B),
+                  color: e ? c.perigo : const Color(0xFF991B1B),
                 ),
               ),
               if (_errorDetail != null) ...[
@@ -769,7 +786,7 @@ try {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 11,
-                      color: Colors.red[400],
+                      color: e ? c.perigo : Colors.red[400],
                       height: 1.5),
                 ),
               ],
@@ -798,7 +815,7 @@ try {
                 style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _navy,
+              backgroundColor: c.marcaBotao,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -824,13 +841,14 @@ try {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
-          const Icon(Icons.wifi_off_rounded, color: _red, size: 22),
+          Icon(Icons.wifi_off_rounded,
+              color: ctx.cores.acentoTexto, size: 22),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
               titulo,
-              style: const TextStyle(
-                color: _navy,
+              style: TextStyle(
+                color: ctx.cores.marca,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -839,7 +857,12 @@ try {
         ]),
         content: Text(
           mensagem,
-          style: TextStyle(fontSize: 13, color: _navy.withOpacity(.7), height: 1.5),
+          style: TextStyle(
+              fontSize: 13,
+              color: ctx.escuro
+                  ? ctx.cores.textoSecundario
+                  : ctx.cores.marca.withValues(alpha: .7),
+              height: 1.5),
         ),
         actions: [
           // Continuar offline
@@ -847,7 +870,7 @@ try {
             onPressed: () => Navigator.pop(ctx, true),
             icon: const Icon(Icons.offline_bolt_outlined, size: 16),
             label: const Text('Continuar offline'),
-            style: TextButton.styleFrom(foregroundColor: _navy),
+            style: TextButton.styleFrom(foregroundColor: ctx.cores.marca),
           ),
           // Tentar novamente
           ElevatedButton.icon(
@@ -855,7 +878,7 @@ try {
             icon: const Icon(Icons.refresh_rounded, size: 16),
             label: const Text('Tentar novamente'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _navy,
+              backgroundColor: ctx.cores.marcaBotao,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
@@ -872,10 +895,10 @@ try {
 
   Widget _buildFooter() {
     return Text(
-      'ERP & PDV © ${DateTime.now().year}',
+      'STech Engenharia © ${DateTime.now().year}',
       style: TextStyle(
           fontSize: 11,
-          color: _navy.withOpacity(.3),
+          color: _marcaSuave(.3),
           letterSpacing: .4),
     );
   }

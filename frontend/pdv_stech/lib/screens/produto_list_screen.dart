@@ -5,12 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:intl/intl.dart';
 import '../widgets/app_sidebar.dart';
+import '../widgets/filtros_listagem.dart';
 import 'produto_form_screen.dart';
 import 'package:api_compartilhado/providers/produto_provider.dart';
 
 // ── Paleta STech ─────────────────────────────────────────────────────────────
 const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       =Color.fromARGB(255, 58, 62, 79);
+const _kAzul       = Color(0xFF1B2A6B);
 const _kBranco     = Colors.white;
 const _kCinzaClaro = Color(0xFFF4F5F7);
 const _kCinzaTexto = Color(0xFF6B7280);
@@ -30,14 +31,64 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
     symbol: 'MZN',
   );
 
+  // ── Filtros ──────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  String _busca = '';
+  double _precoMin = 0;
+  double _precoMax = double.infinity;
+  Set<int> _categoriasSel = {};
+  Set<int> _marcasSel = {};
+  EstadoFiltro _estado = EstadoFiltro.todos;
+
+  bool get _temFiltros =>
+      _busca.isNotEmpty ||
+      _precoMin > 0 ||
+      _precoMax != double.infinity ||
+      _categoriasSel.isNotEmpty ||
+      _marcasSel.isNotEmpty ||
+      _estado != EstadoFiltro.todos;
+
+  void _limparFiltros() {
+    _searchCtrl.clear();
+    setState(() {
+      _busca = '';
+      _precoMin = 0;
+      _precoMax = double.infinity;
+      _categoriasSel = {};
+      _marcasSel = {};
+      _estado = EstadoFiltro.todos;
+    });
+  }
+
+  List<ProdutoModel> _filtrar(List<ProdutoModel> todos) {
+    return todos.where((p) {
+      final matchNome = p.nomeProduto.toLowerCase().contains(_busca);
+      final matchPreco =
+          p.precoEfectivo >= _precoMin && p.precoEfectivo <= _precoMax;
+      final matchCat = _categoriasSel.isEmpty ||
+          p.categorias.any(_categoriasSel.contains);
+      final matchMarca =
+          _marcasSel.isEmpty || p.marcas.any(_marcasSel.contains);
+      final matchEstado = _estado == EstadoFiltro.todos ||
+          (_estado == EstadoFiltro.ativos ? p.estaAtivo : !p.estaAtivo);
+      return matchNome && matchPreco && matchCat && matchMarca && matchEstado;
+    }).toList();
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-  context.read<ProdutoProvider>().listar();
-  context.read<MarcaProvider>().carregarMarcas();
-  context.read<CategoriaProvider>().carregarCategorias();
-});
+      context.read<ProdutoProvider>().listar();
+      context.read<MarcaProvider>().carregarMarcas();
+      context.read<CategoriaProvider>().carregarCategorias();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   // ── Acções ────────────────────────────────────────────────────────────────
@@ -235,108 +286,147 @@ final categoriasPorId = {
       );
     }
 
-    return RefreshIndicator(
-      color: _kAzul,
-      onRefresh: () async => provider.listar(),
+    final filtrados = _filtrar(provider.produtos);
+
+    return Column(
+      children: [
+        _buildFiltros(
+          todos: provider.produtos,
+          marcasPorId: marcasPorId,
+          categoriasPorId: categoriasPorId,
+          totalFiltrado: filtrados.length,
+        ),
+        Expanded(
+          child: filtrados.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search_off,
+                          size: 72, color: Colors.grey[300]),
+                      const SizedBox(height: 12),
+                      Text('Nenhum produto corresponde ao filtro',
+                          style: TextStyle(
+                              fontSize: 16, color: Colors.grey[500])),
+                      TextButton(
+                        onPressed: _limparFiltros,
+                        child: const Text('Limpar filtros'),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: _kAzul,
+                  onRefresh: () async => provider.listar(),
+                  child: Column(
+                    children: [
+                      Container( /* cabeçalho da tabela: inalterado */ ),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
+                          itemCount: filtrados.length,
+                          itemBuilder: (_, i) => _ProdutoLinhaTabela(
+                            produto: filtrados[i],
+                            currencyFmt: _currencyFormat,
+                            isAlternate: i.isOdd,
+                            marcasPorId: marcasPorId,
+                            categoriasPorId: categoriasPorId,
+                            onEditar: () =>
+                                _navegarParaFormulario(filtrados[i]),
+                            onToggle: () => _toggleStatus(filtrados[i]),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+    Widget _buildFiltros({
+    required List<ProdutoModel> todos,
+    required Map<int, String> marcasPorId,
+    required Map<int, String> categoriasPorId,
+    required int totalFiltrado,
+  }) {
+    final precoMaxAbs = todos.isEmpty
+        ? 0.0
+        : todos.map((p) => p.precoEfectivo).reduce((a, b) => a > b ? a : b);
+
+    return Container(
+      color: _kAzul.withOpacity(0.04),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
         children: [
-          // ── Cabeçalho da tabela ──────────────────────────────────
-          Container(
-            margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: _kAzul,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(10)),
-            ),
-            child: const Row(
+          FiltroPesquisa(
+            controller: _searchCtrl,
+            hint: 'Pesquisar produto…',
+            onChanged: (v) => setState(() => _busca = v.toLowerCase()),
+            onClear: () {
+              _searchCtrl.clear();
+              setState(() => _busca = '');
+            },
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-Expanded(
-  flex: 3,
-  child: Text(
-    'Produto',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-Expanded(
-  flex: 2,
-  child: Text(
-    'Marca',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-Expanded(
-  flex: 2,
-  child: Text(
-    'Categoria',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-Expanded(
-  flex: 2,
-  child: Text(
-    'Preço',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-Expanded(
-  flex: 2,
-  child: Text(
-    'Estoque',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-Expanded(
-  flex: 1,
-  child: Text(
-    'Estado',
-    style: TextStyle(
-      color: _kBranco,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    ),
-  ),
-),
-SizedBox(width: 100),
+                FiltroPrecoRow(
+                  precoMin: _precoMin,
+                  precoMax: _precoMax,
+                  precoMaxAbsoluto: precoMaxAbs,
+                  onChanged: (min, max) =>
+                      setState(() { _precoMin = min; _precoMax = max; }),
+                ),
+                const SizedBox(width: 6),
+                FiltroSelecaoMultipla(
+                  rotulo: 'Categoria',
+                  icone: Icons.category_outlined,
+                  opcoes: categoriasPorId,
+                  selecionados: _categoriasSel,
+                  onChanged: (s) => setState(() => _categoriasSel = s),
+                ),
+                const SizedBox(width: 6),
+                FiltroSelecaoMultipla(
+                  rotulo: 'Marca',
+                  icone: Icons.sell_outlined,
+                  opcoes: marcasPorId,
+                  selecionados: _marcasSel,
+                  onChanged: (s) => setState(() => _marcasSel = s),
+                ),
+                const SizedBox(width: 12),
+                FiltroEstadoChips(
+                  selecionado: _estado,
+                  onChanged: (e) => setState(() => _estado = e),
+                ),
               ],
             ),
           ),
-          // ── Linhas ───────────────────────────────────────────────
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
-              itemCount: provider.produtos.length,
-          itemBuilder: (_, i) => _ProdutoLinhaTabela(
-  produto: provider.produtos[i],
-  currencyFmt: _currencyFormat,
-  isAlternate: i.isOdd,
-  marcasPorId: marcasPorId,
-  categoriasPorId: categoriasPorId,
-  onEditar: () => _navegarParaFormulario(provider.produtos[i]),
-  onToggle: () => _toggleStatus(provider.produtos[i]),
-),
-            ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (_temFiltros)
+                TextButton.icon(
+                  onPressed: _limparFiltros,
+                  icon: const Icon(Icons.filter_alt_off, size: 14),
+                  label: const Text('Limpar filtros',
+                      style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _kVermelho,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 24),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
+              Text('$totalFiltrado produto(s) encontrado(s)',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+            ],
           ),
         ],
       ),

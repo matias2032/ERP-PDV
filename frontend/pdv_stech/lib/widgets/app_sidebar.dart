@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'dart:io';
-
-const _kVermelho  = Color(0xFFC8102E);
-const _kAzul      = Color(0xFF3A3E4F);
-const _kBranco    = Colors.white;
-const _kCinzaTexto = Color(0xFF6B7280);
+import '../theme/app_theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Modelo de item de menu
@@ -26,7 +22,7 @@ class _MenuItem {
     required this.title,
     required this.route,
     this.badge = 0,
-    this.badgeColor = _kVermelho,
+ this.badgeColor = AppColors.vermelhoMarca,
   });
 }
 
@@ -407,6 +403,7 @@ final grupos = usuario.isAdmin
                 ),
                 // Grupos expansíveis
                 ...grupos.map((g) => _buildGrupo(g)),
+                const ModoEscuroTile(),
               ],
             ),
           ),
@@ -430,7 +427,7 @@ Widget _buildHeader(usuario) {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF3A3E4F), Color.fromARGB(255, 18, 19, 24)],
+        colors: [Color(0xFF1B2A6B), Color(0xFF11183E)],
       ),
     ),
     child: Column(
@@ -440,12 +437,12 @@ Widget _buildHeader(usuario) {
           tag: 'user_avatar_${usuario.id}',
           child: CircleAvatar(
             radius: 30,
-              backgroundColor: _kBranco,
+              backgroundColor: AppColors.branco,
               child: Text(
                 usuario.nome[0].toUpperCase(),
                 style: const TextStyle(
                   fontSize: 28,
-                  color: _kAzul,
+                  color: AppColors.azulMarca,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -455,7 +452,7 @@ Widget _buildHeader(usuario) {
           Text(
             '${usuario.nome} ${usuario.apelido}',
             style: const TextStyle(
-              color: _kBranco,
+              color: AppColors.branco,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -466,13 +463,13 @@ Widget _buildHeader(usuario) {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: _kBranco.withOpacity(0.2),
+              color: AppColors.branco.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               usuario.nomePerfil,
               style: const TextStyle(
-                color: _kBranco, fontSize: 12, fontWeight: FontWeight.w500),
+                color: AppColors.branco, fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -494,18 +491,19 @@ Widget _buildHeader(usuario) {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: ListTile(
         dense: true,
-        leading: Icon(icon,
-            size: 22, color: sel ? _kVermelho : Colors.grey[700]),
+   leading: Icon(icon,
+            size: 22,
+            color: sel ? context.cores.acentoTexto : context.cores.icone),
         title: Text(
           title,
           style: TextStyle(
             fontSize: 14,
-            color: sel ? _kAzul : Colors.black87,
+            color: sel ? context.cores.marca : context.cores.textoPrincipal,
             fontWeight: sel ? FontWeight.w700 : FontWeight.normal,
           ),
         ),
         selected: sel,
-        selectedTileColor: _kAzul.withOpacity(0.08),
+        selectedTileColor: context.cores.marca.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         onTap: () {
           Navigator.pop(context);
@@ -542,7 +540,7 @@ Widget _buildHeader(usuario) {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               decoration: BoxDecoration(
                 color: temActivo
-                    ? _kAzul.withOpacity(0.06)
+                    ? context.cores.marca.withValues(alpha: 0.06)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -551,7 +549,9 @@ Widget _buildHeader(usuario) {
                   Icon(
                     grupo.icon,
                     size: 22,
-                    color: temActivo ? _kVermelho : Colors.grey[700],
+                    color: temActivo
+                        ? context.cores.acentoTexto
+                        : context.cores.icone,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -562,7 +562,9 @@ Widget _buildHeader(usuario) {
                         fontWeight: temActivo
                             ? FontWeight.w700
                             : FontWeight.w600,
-                        color: temActivo ? _kAzul : Colors.black87,
+                        color: temActivo
+                            ? context.cores.marca
+                            : context.cores.textoPrincipal,
                       ),
                     ),
                   ),
@@ -572,7 +574,7 @@ Widget _buildHeader(usuario) {
                     child: Icon(
                       Icons.expand_more_rounded,
                       size: 20,
-                      color: Colors.grey[600],
+                      color: context.cores.textoSecundario,
                     ),
                   ),
                 ],
@@ -611,7 +613,10 @@ Widget _buildHeader(usuario) {
           clipBehavior: Clip.none,
           children: [
             Icon(item.icon,
-                size: 20, color: sel ? _kVermelho : Colors.grey[600]),
+                size: 20,
+                color: sel
+                    ? context.cores.acentoTexto
+                    : context.cores.textoSecundario),
             if (item.badge > 0)
               Positioned(
                 top: -5,
@@ -625,7 +630,7 @@ Widget _buildHeader(usuario) {
                   child: Text(
                     item.badge > 99 ? '99+' : '${item.badge}',
                     style: const TextStyle(
-                        color: _kBranco,
+                        color: AppColors.branco,
                         fontSize: 9,
                         fontWeight: FontWeight.bold),
                   ),
@@ -637,12 +642,12 @@ Widget _buildHeader(usuario) {
           item.title,
           style: TextStyle(
             fontSize: 13,
-            color: sel ? _kAzul : Colors.black87,
+            color: sel ? context.cores.marca : context.cores.textoPrincipal,
             fontWeight: sel ? FontWeight.w700 : FontWeight.normal,
           ),
         ),
         selected: sel,
-        selectedTileColor: _kAzul.withOpacity(0.08),
+        selectedTileColor: context.cores.marca.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         onTap: () {
           Navigator.pop(context);
@@ -659,7 +664,7 @@ Widget _buildHeader(usuario) {
   Widget _buildUserSection(usuario) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: context.cores.superficieAlt,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -679,9 +684,9 @@ Widget _buildHeader(usuario) {
             child: _showUserMenu
                 ? Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cores.superficie,
                       border: Border(
-                          bottom: BorderSide(color: Colors.grey[300]!)),
+                          bottom: BorderSide(color: context.cores.borda)),
                     ),
                     child: Column(
                       children: [
@@ -694,7 +699,7 @@ Widget _buildHeader(usuario) {
                             Navigator.pushNamed(context, '/editar_usuario');
                           },
                         ),
-                        Divider(height: 1, color: Colors.grey[200]),
+    Divider(height: 1, color: context.cores.borda),
                         _buildUserMenuItem(
                           icon:  Icons.lock_rounded,
                           title: 'Alterar Senha',
@@ -704,7 +709,7 @@ Widget _buildHeader(usuario) {
                             Navigator.pushNamed(context, '/alterar_senha');
                           },
                         ),
-                        Divider(height: 1, color: Colors.grey[200]),
+                       Divider(height: 1, color: context.cores.borda),
                         _buildUserMenuItem(
                           icon:  Icons.logout_rounded,
                           title: 'Sair',
@@ -736,11 +741,11 @@ Widget _buildHeader(usuario) {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: _kAzul,
+                      backgroundColor: context.cores.marcaBotao,
                       child: Text(
                         usuario.nome[0].toUpperCase(),
                         style: const TextStyle(
-                          color: _kBranco,
+                          color: AppColors.branco,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -763,7 +768,8 @@ Widget _buildHeader(usuario) {
                           Text(
                             usuario.email,
                             style: TextStyle(
-                                fontSize: 11, color: Colors.grey[600]),
+                                fontSize: 11,
+                                color: context.cores.textoSecundario),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -772,7 +778,7 @@ Widget _buildHeader(usuario) {
                     RotationTransition(
                       turns: _rotationAnim,
                       child: Icon(Icons.expand_less_rounded,
-                          color: Colors.grey[700]),
+                          color: context.cores.icone),
                     ),
                   ],
                 ),
@@ -795,7 +801,7 @@ Widget _buildHeader(usuario) {
       title: Text(
         title,
         style: TextStyle(
-          color: title == 'Sair' ? Colors.red : Colors.black87,
+          color: title == 'Sair' ? Colors.red : context.cores.textoPrincipal,
           fontSize: 13,
         ),
       ),

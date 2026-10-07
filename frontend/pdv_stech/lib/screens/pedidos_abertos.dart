@@ -5,12 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 
+import '../theme/app_theme.dart';
 import 'finalizar_pedido.dart';
 import 'devolucao_troca_screen.dart';
-// ─── Paleta (igual a detalhes_produto.dart) ───────────────────────────────────
-const _kPrimary = Color.fromARGB(255, 58, 62, 79);
-const _kAccent = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
 
 class PedidosAbertosScreen extends StatefulWidget {
   const PedidosAbertosScreen({Key? key}) : super(key: key);
@@ -124,7 +121,8 @@ Future<void> _cancelarPedido(PedidoModel pedido) async {
       } else if (provider.erroEhPedidoJaFaturado) {
         await _tratarPedidoJaFaturado(pedido);
       } else {
-        _snack('Erro ao cancelar: ${provider.errorMessage}', _kAccent);
+        _snack('Erro ao cancelar: ${provider.errorMessage}',
+            AppColors.vermelhoMarca);
       }
     } finally {
       if (mounted) setState(() => _operacaoEmAndamento = false);
@@ -139,9 +137,10 @@ Future<void> _cancelarPedido(PedidoModel pedido) async {
           builder: (ctx) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text(
+            title: Text(
               'Pedido já facturado',
-              style: TextStyle(color: _kPrimary, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: ctx.cores.marca, fontWeight: FontWeight.bold),
             ),
             content: const Text(
               'Este pedido já tem factura emitida e não pode ser cancelado '
@@ -155,8 +154,8 @@ Future<void> _cancelarPedido(PedidoModel pedido) async {
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kPrimary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: ctx.cores.marcaBotao,
+                  foregroundColor: AppColors.branco,
                 ),
                 child: const Text('Ir para devolução'),
               ),
@@ -186,7 +185,7 @@ Future<void> _cancelarPedido(PedidoModel pedido) async {
     if (documentoValido == null) {
       _snack(
         'Não foi encontrado um documento fiscal válido para este pedido.',
-        _kAccent,
+        AppColors.vermelhoMarca,
       );
       return;
     }
@@ -240,7 +239,8 @@ Future<void> _editarPedido(PedidoModel pedido) async {
     // mas ainda visível temporariamente nesta lista — nunca reactivar.
     PedidoAtivoController.instance.limpar();
     context.read<PedidoProvider>().limparPedidoActual();
-    _snack('Este pedido já foi encerrado e não pode receber novos itens.', _kAccent);
+    _snack('Este pedido já foi encerrado e não pode receber novos itens.',
+        AppColors.vermelhoMarca);
     await _carregar();
     return;
   }
@@ -308,7 +308,7 @@ Future<void> _eliminarItemProduto(ItemPedidoModel item) async {
     await _sincronizarPedidoCreditoAtivo();
 if (mounted) setState(() {});
   } catch (e) {
-    _snack('Erro ao remover produto: $e', _kAccent);
+    _snack('Erro ao remover produto: $e', AppColors.vermelhoMarca);
   } finally {
     if (mounted) setState(() => _operacaoEmAndamento = false);
   }
@@ -355,7 +355,7 @@ Future<void> _eliminarItemServico(ItemPedidoServicoModel item) async {
     await _sincronizarPedidoCreditoAtivo();
 if (mounted) setState(() {});
   } catch (e) {
-    _snack('Erro ao remover serviço: $e', _kAccent);
+    _snack('Erro ao remover serviço: $e', AppColors.vermelhoMarca);
   } finally {
     if (mounted) setState(() => _operacaoEmAndamento = false);
   }
@@ -372,10 +372,10 @@ if (mounted) setState(() {});
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text(
+            title: Text(
               'Cancelar Pedido',
               style: TextStyle(
-                color: _kPrimary,
+                color: ctx.cores.marca,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -385,9 +385,9 @@ if (mounted) setState(() {});
               children: [
                 Text(
                   pedido.referencia,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: _kPrimary,
+                    color: ctx.cores.marca,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -400,7 +400,7 @@ if (mounted) setState(() {});
                 _infoBox(
                   icon: Icons.warning_amber,
                   texto: 'O estoque será restaurado automaticamente.',
-                  cor: Colors.orange,
+                  cor: ctx.cores.aviso,
                 ),
               ],
             ),
@@ -412,8 +412,8 @@ if (mounted) setState(() {});
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kAccent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.vermelhoMarca,
+                  foregroundColor: AppColors.branco,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -438,8 +438,8 @@ if (mounted) setState(() {});
             ),
             title: Text(
               titulo,
-              style: const TextStyle(
-                color: _kPrimary,
+              style: TextStyle(
+                color: ctx.cores.marca,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -452,8 +452,8 @@ if (mounted) setState(() {});
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kAccent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.vermelhoMarca,
+                  foregroundColor: AppColors.branco,
                 ),
                 child: const Text('Remover'),
               ),
@@ -513,7 +513,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
     final provider = context.watch<PedidoProvider>();
 
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: context.cores.fundo,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(provider),
@@ -535,13 +535,13 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
 
     return SliverAppBar(
       pinned: true,
-      backgroundColor: _kPrimary,
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       expandedHeight: 120,
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: AppColors.branco.withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
         child: IconButton(
@@ -562,7 +562,10 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [_kPrimary, _kPrimary.withBlue(140)],
+              colors: [
+                AppColors.azulMarca,
+                AppColors.azulMarca.withBlue(140),
+              ],
             ),
           ),
           child: Align(
@@ -574,12 +577,12 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: AppColors.branco.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.pending_actions,
-                      color: Colors.white,
+                      color: AppColors.branco,
                       size: 24,
                     ),
                   ),
@@ -591,7 +594,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                       const Text(
                         'Pedidos Abertos',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.branco,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -601,7 +604,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                             ? 'A carregar…'
                             : '${pedidos.length} pedido(s)',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.75),
+                          color: AppColors.branco.withValues(alpha: 0.75),
                           fontSize: 13,
                         ),
                       ),
@@ -619,18 +622,20 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
   // ─── Corpo ─────────────────────────────────────────────────────────────────
 
   Widget _buildBody(PedidoProvider provider) {
+    final c = context.cores;
     final pedidos = _pedidosVisiveis(provider);
 
     if (provider.isLoading) {
-      return const SizedBox(
+      return SizedBox(
         height: 300,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: _kPrimary),
-              SizedBox(height: 16),
-              Text('A carregar pedidos…', style: TextStyle(color: Colors.grey)),
+              CircularProgressIndicator(color: c.marca),
+              const SizedBox(height: 16),
+              Text('A carregar pedidos…',
+                  style: TextStyle(color: c.textoSecundario)),
             ],
           ),
         ),
@@ -646,12 +651,12 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: _kAccent),
+                Icon(Icons.error_outline, size: 64, color: c.acentoTexto),
                 const SizedBox(height: 16),
                 Text(
                   provider.errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: c.textoSecundario),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
@@ -659,8 +664,8 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                   icon: const Icon(Icons.refresh),
                   label: const Text('Tentar novamente'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kPrimary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: c.marcaBotao,
+                    foregroundColor: AppColors.branco,
                   ),
                 ),
               ],
@@ -680,7 +685,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
               Icon(
                 Icons.check_circle_outline,
                 size: 80,
-                color: Colors.grey[300],
+                color: c.desactivado,
               ),
               const SizedBox(height: 16),
               Text(
@@ -688,13 +693,13 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[500],
+                  color: c.textoSecundario,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Todos os pedidos foram finalizados.',
-                style: TextStyle(color: Colors.grey[400]),
+                style: TextStyle(color: c.textoSecundario),
               ),
             ],
           ),
@@ -704,7 +709,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
 
     return RefreshIndicator(
       onRefresh: _carregar,
-      color: _kAccent,
+      color: c.acentoTexto,
       child: ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -720,6 +725,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
   // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildCard(PedidoModel pedido) {
+    final c = context.cores;
     final pedidoActual = context.watch<PedidoProvider>().pedidoActual;
     final pedidoAtivoController =
         PedidoAtivoController.instance.pedidoAtivo.value;
@@ -733,12 +739,12 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isAtivo ? Colors.green.shade400 : Colors.grey.shade200,
+          color: isAtivo ? c.sucesso : c.borda,
           width: isAtivo ? 2 : 1,
         ),
       ),
@@ -753,12 +759,12 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _kPrimary.withOpacity(0.08),
+                    color: c.marca.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.receipt_outlined,
-                    color: _kPrimary,
+                    color: c.marca,
                     size: 22,
                   ),
                 ),
@@ -769,17 +775,17 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                     children: [
                       Text(
                         pedido.referencia,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: _kPrimary,
+                          color: c.marca,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         _formatarData(pedido.dataPedido),
                         style: TextStyle(
-                          color: Colors.grey[500],
+                          color: c.textoSecundario,
                           fontSize: 12,
                         ),
                       ),
@@ -794,12 +800,10 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: ehCredito ? Colors.orange[50] : Colors.blue[50],
+                    color: ehCredito ? c.avisoFundo : c.infoFundo,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: ehCredito
-                          ? Colors.orange.shade200
-                          : Colors.blue.shade200,
+                      color: ehCredito ? c.aviso : c.info,
                     ),
                   ),
                   child: Row(
@@ -810,16 +814,13 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
                             ? Icons.credit_score_outlined
                             : Icons.radio_button_on,
                         size: 10,
-                        color:
-                            ehCredito ? Colors.orange[700] : Colors.blue[700],
+                        color: ehCredito ? c.aviso : c.info,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         ehCredito ? 'Crédito' : 'Aberto',
                         style: TextStyle(
-                          color: ehCredito
-                              ? Colors.orange[700]
-                              : Colors.blue[700],
+                          color: ehCredito ? c.aviso : c.info,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -831,7 +832,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
             ),
 
             const SizedBox(height: 14),
-            Divider(height: 1, color: Colors.grey[200]),
+            Divider(height: 1, color: c.borda),
             const SizedBox(height: 14),
 
             // ── Itens de produto ───────────────────────────────────────────
@@ -850,7 +851,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
             ],
 
             const SizedBox(height: 14),
-            Divider(height: 1, color: Colors.grey[200]),
+            Divider(height: 1, color: c.borda),
             const SizedBox(height: 12),
 
             // ── Rodapé: resumo + acções ────────────────────────────────────
@@ -864,16 +865,17 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
   // ─── Label de secção ──────────────────────────────────────────────────────
 
   Widget _sectionLabel(IconData icon, String texto) {
+    final c = context.cores;
     return Row(
       children: [
-        Icon(icon, size: 14, color: _kPrimary.withOpacity(0.5)),
+        Icon(icon, size: 14, color: c.marca.withValues(alpha: 0.5)),
         const SizedBox(width: 6),
         Text(
           texto,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
+            color: c.textoSecundario,
           ),
         ),
       ],
@@ -883,6 +885,7 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
   // ─── Linha de item de produto ─────────────────────────────────────────────
 
   Widget _buildLinhaItemProduto(ItemPedidoModel item) {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -890,15 +893,15 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _kPrimary.withOpacity(0.07),
+              color: c.marca.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               '${item.quantidade}×',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: _kPrimary,
+                color: c.marca,
               ),
             ),
           ),
@@ -912,26 +915,26 @@ PedidoModel? _buscarPedidoDoItemServico(ItemPedidoServicoModel item) {
           ),
           Text(
             _currencyFmt.format(item.subtotal),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: _kPrimary,
+              color: c.marca,
             ),
           ),
           const SizedBox(width: 6),
           Builder(
-            builder: (_) {
+            builder: (ctx) {
 final bloqueado = item.confirmadoCredito ||
     PedidoAtivoController.instance.produtoEstaBloqueado(
       item.idItemPedido,
     );
 
               if (bloqueado) {
-                return const Tooltip(
+                return Tooltip(
                   message: 'Item já confirmado no crédito',
                   child: Icon(
                     Icons.lock_outline,
-                    color: Colors.grey,
+                    color: ctx.cores.textoSecundario,
                     size: 18,
                   ),
                 );
@@ -939,9 +942,9 @@ final bloqueado = item.confirmadoCredito ||
 
               return IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline,
-                  color: Colors.red,
+                  color: ctx.cores.perigo,
                   size: 20,
                 ),
                 onPressed: () => _eliminarItemProduto(item),
@@ -956,6 +959,7 @@ final bloqueado = item.confirmadoCredito ||
   // ─── Linha de item de serviço ─────────────────────────────────────────────
 
   Widget _buildLinhaItemServico(ItemPedidoServicoModel item) {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -963,15 +967,15 @@ final bloqueado = item.confirmadoCredito ||
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.07),
+              color: c.info.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               '${item.quantidade}×',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: c.info,
               ),
             ),
           ),
@@ -988,7 +992,7 @@ final bloqueado = item.confirmadoCredito ||
                 if (item.observacoes != null && item.observacoes!.isNotEmpty)
                   Text(
                     item.observacoes!,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 11, color: c.textoSecundario),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
@@ -996,26 +1000,26 @@ final bloqueado = item.confirmadoCredito ||
           ),
           Text(
             _currencyFmt.format(item.subtotal),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: _kPrimary,
+              color: c.marca,
             ),
           ),
           const SizedBox(width: 6),
           Builder(
-            builder: (_) {
+            builder: (ctx) {
 final bloqueado = item.confirmadoCredito ||
     PedidoAtivoController.instance.servicoEstaBloqueado(
       item.idItemServico,
     );
 
               if (bloqueado) {
-                return const Tooltip(
+                return Tooltip(
                   message: 'Item já confirmado no crédito',
                   child: Icon(
                     Icons.lock_outline,
-                    color: Colors.grey,
+                    color: ctx.cores.textoSecundario,
                     size: 18,
                   ),
                 );
@@ -1023,9 +1027,9 @@ final bloqueado = item.confirmadoCredito ||
 
               return IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline,
-                  color: Colors.red,
+                  color: ctx.cores.perigo,
                   size: 20,
                 ),
                 onPressed: () => _eliminarItemServico(item),
@@ -1039,14 +1043,15 @@ final bloqueado = item.confirmadoCredito ||
 
   // ─── Rodapé do card ───────────────────────────────────────────────────────
 Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
+  final c = context.cores;
   return Container(
     constraints: const BoxConstraints(maxWidth: 360),
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: _kPrimary.withOpacity(0.035),
+      color: c.marca.withValues(alpha: 0.035),
       borderRadius: BorderRadius.circular(14),
       border: Border.all(
-        color: _kPrimary.withOpacity(0.12),
+        color: c.marca.withValues(alpha: 0.12),
       ),
     ),
     child: Column(
@@ -1057,13 +1062,13 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
             Icon(
               Icons.task_alt_rounded,
               size: 16,
-              color: _kPrimary.withOpacity(0.8),
+              color: c.marca.withValues(alpha: 0.8),
             ),
             const SizedBox(width: 6),
-            const Text(
+            Text(
               'Escolha o tipo de finalização',
               style: TextStyle(
-                color: _kPrimary,
+                color: c.marca,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -1083,8 +1088,8 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _kPrimary,
-            foregroundColor: Colors.white,
+            backgroundColor: c.marcaBotao,
+            foregroundColor: AppColors.branco,
             elevation: 2,
             minimumSize: const Size.fromHeight(44),
             shape: RoundedRectangleBorder(
@@ -1102,17 +1107,17 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.08),
+              color: c.aviso.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(11),
               border: Border.all(
-                color: Colors.orange.withOpacity(0.35),
+                color: c.aviso.withValues(alpha: 0.35),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.credit_score_outlined,
-                  color: Colors.orange[800],
+                  color: c.aviso,
                   size: 19,
                 ),
                 const SizedBox(width: 8),
@@ -1120,7 +1125,7 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
                   child: Text(
                     'Vender a crédito',
                     style: TextStyle(
-                      color: Colors.orange[900],
+                      color: c.aviso,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1129,7 +1134,7 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
                 Text(
                   'Dívida',
                   style: TextStyle(
-                    color: Colors.orange[800],
+                    color: c.aviso,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1137,7 +1142,7 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
                 const SizedBox(width: 4),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: Colors.orange[800],
+                  color: c.aviso,
                   size: 13,
                 ),
               ],
@@ -1152,6 +1157,7 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
 
 
   Widget _buildRodape(PedidoModel pedido, int totalItens) {
+    final c = context.cores;
     final ehCredito = pedido.ehCredito || pedido.estaEmDivida;
 
     return Row(
@@ -1161,8 +1167,8 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
           icon: const Icon(Icons.add, size: 16),
           label: const Text('Itens'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: _kPrimary,
-            side: const BorderSide(color: _kPrimary),
+            foregroundColor: c.marca,
+            side: BorderSide(color: c.marca),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -1178,8 +1184,8 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
             icon: const Icon(Icons.close, size: 16),
             label: const Text('Cancelar'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: _kAccent,
-              side: const BorderSide(color: _kAccent),
+              foregroundColor: c.acentoTexto,
+              side: BorderSide(color: c.acentoTexto),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -1195,14 +1201,14 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
           children: [
             Text(
               '$totalItens item(s)',
-              style: TextStyle(color: Colors.grey[500], fontSize: 11),
+              style: TextStyle(color: c.textoSecundario, fontSize: 11),
             ),
             Text(
               _currencyFmt.format(pedido.total),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: _kPrimary,
+                color: c.marca,
               ),
             ),
           ],
@@ -1220,8 +1226,9 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
+              // Cor fixa deliberada (botão laranja com texto branco).
               backgroundColor: Colors.orange[700],
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.branco,
               elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -1247,9 +1254,9 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cor.withOpacity(0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -1272,7 +1279,9 @@ Widget _buildAcoesFinalizacaoNormal(PedidoModel pedido) {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          Text(label,
+              style: TextStyle(
+                  color: context.cores.textoSecundario, fontSize: 13)),
           Text(
             valor,
             style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
