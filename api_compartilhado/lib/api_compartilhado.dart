@@ -22,6 +22,7 @@ export 'models/extrato_model.dart';
 export 'models/cotacao_model.dart';
 export 'models/fornecedor_model.dart';
 export 'models/despesa_model.dart';
+export 'models/configuracao_model.dart';
 
 // 3. Services
 export 'services/sessao_service.dart';
@@ -47,6 +48,7 @@ export 'services/extrato_pdf_service.dart';
 export 'services/cotacao_pdf_service.dart'; 
 export 'services/fornecedor_service.dart';
 export 'services/despesa_service.dart';
+export 'services/configuracao_service.dart';
 export 'services/extrato_pdf_interno_service.dart';
 
 
@@ -65,6 +67,8 @@ export 'providers/fornecedor_provider.dart';
 export 'providers/marca_provider.dart';         // novo
 export 'providers/categoria_provider.dart';     // novo
 export 'providers/despesa_provider.dart';
+export 'providers/configuracao_provider.dart';
+export 'core/utils/iva_util.dart';
 
 
 // 5. Controllers

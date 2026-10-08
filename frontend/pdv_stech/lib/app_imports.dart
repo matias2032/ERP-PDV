@@ -78,5 +78,6 @@ export 'screens/devolucao_troca_screen.dart';
 
 export 'screens/importar_backup_screen.dart';
 export 'screens/exportar_backup_screen.dart';
+export 'screens/configuracoes_screen.dart';
 
 

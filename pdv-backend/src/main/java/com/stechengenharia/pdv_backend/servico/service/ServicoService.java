@@ -1,5 +1,7 @@
 package com.stechengenharia.pdv_backend.servico.service;
 
+import com.stechengenharia.pdv_backend.common.util.IvaUtil;
+import com.stechengenharia.pdv_backend.configuracao.service.ConfiguracaoService;
 import com.stechengenharia.pdv_backend.servico.dto.ServicoRequestDTO;
 import com.stechengenharia.pdv_backend.servico.dto.ServicoResponseDTO;
 import com.stechengenharia.pdv_backend.servico.entity.Servico;
@@ -12,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class ServicoService {
 
     private final ServicoRepository servicoRepository;
+    private final ConfiguracaoService configuracaoService;
 
     // ════════════════════════════════════════════════════════════════════════
     // CRIAR
@@ -37,7 +41,10 @@ public ServicoResponseDTO criar(ServicoRequestDTO dto) {
     Servico servico = new Servico();
     servico.setNomeServico(dto.nomeServico);
     servico.setDescricao(dto.descricao);
-    servico.setPrecoUnitario(dto.precoUnitario);
+    BigDecimal iva = configuracaoService.getIvaPercentual();
+    servico.setPrecoSemIva(dto.precoUnitario);
+    servico.setIvaAplicado(iva);
+    servico.setPrecoUnitario(IvaUtil.comIva(dto.precoUnitario, iva));
     servico.setUnidade(dto.unidade);
     servico.setAtivo(true);
     servico.setSyncStatus("PENDING_CREATE"); // AuditableEntity já define, mas explícito
@@ -160,6 +167,8 @@ private Servico buscarEntidade(Integer id) {
                 s.getNomeServico(),
                 s.getDescricao(),
                 s.getPrecoUnitario(),
+                s.getPrecoSemIva(),
+                s.getIvaAplicado(),
                 s.getUnidade(),
                 s.getAtivo()
         );

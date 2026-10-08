@@ -25,8 +25,15 @@ public class Servico extends AuditableEntity {
     @Column(name = "descricao", columnDefinition = "TEXT")
     private String descricao;
 
+    /** Preço final (já com IVA) */
     @Column(name = "preco_unitario", nullable = false, precision = 12, scale = 2)
     private BigDecimal precoUnitario;
+
+    @Column(name = "preco_sem_iva", nullable = false, precision = 12, scale = 2)
+    private BigDecimal precoSemIva;
+
+    @Column(name = "iva_aplicado", nullable = false, precision = 5, scale = 2)
+    private BigDecimal ivaAplicado;
 
     @Column(name = "unidade", nullable = false, length = 50)
     private String unidade;

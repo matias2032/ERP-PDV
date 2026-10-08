@@ -36,6 +36,7 @@ void main() async {
   await LocalDatabase.instance.init();
 
   await ConnectivityService.instance.init();
+  await ConfiguracaoService.instance.carregar();
 
   final themeController = ThemeController();
   await themeController.carregar();
@@ -178,6 +179,7 @@ fornecedorService: fornecedorService,
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<ThemeController>.value(value: themeController),
+      ChangeNotifierProvider(create: (_) => ConfiguracaoProvider()),
 
       // ── Utilizador ────────────────────────────────────────────────
      ChangeNotifierProvider(
@@ -291,6 +293,7 @@ ChangeNotifierProvider(
            '/despesas_excluidas': (_) => const DespesasExcluidasScreen(),
            '/importar_backup': (_) => const ImportarBackupScreen(),
            '/exportar_backup': (_) => const ExportarBackupScreen(),
+           '/configuracoes': (_) => const ConfiguracoesScreen(),
            
            
         },

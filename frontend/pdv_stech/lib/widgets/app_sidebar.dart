@@ -345,6 +345,11 @@ _MenuGroup(
         title: 'Utilizadores',
         route: '/gerenciar_usuarios',
       ),
+      _MenuItem(
+        icon: Icons.settings_rounded,
+        title: 'Configurações gerais',
+        route: '/configuracoes',
+      ),
       if (!Platform.isAndroid && !Platform.isIOS)
         _MenuItem(
           icon: Icons.print_rounded,

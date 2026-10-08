@@ -26,8 +26,15 @@ public class Produto extends AuditableEntity {
     @Column(name = "descricao", columnDefinition = "TEXT")
     private String descricao;
 
+
     @Column(name = "preco", nullable = false, precision = 10, scale = 2)
     private BigDecimal preco;
+
+    @Column(name = "preco_sem_iva", nullable = false, precision = 10, scale = 2)
+    private BigDecimal precoSemIva;
+
+    @Column(name = "iva_aplicado", nullable = false, precision = 5, scale = 2)
+    private BigDecimal ivaAplicado;
 
     @Column(name = "quantidade_estoque", nullable = false)
     private Integer quantidadeEstoque = 0;

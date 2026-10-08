@@ -10,7 +10,9 @@ public class ProdutoResponseDTO {
     private Integer idProduto;
     private String nomeProduto;
     private String descricao;
-    private BigDecimal preco;
+    private BigDecimal preco;          // com IVA
+    private BigDecimal precoSemIva;
+    private BigDecimal ivaAplicado;
     private Integer quantidadeEstoque;
     private BigDecimal precoPromocional;
         private List<Integer> marcas; // ✅ ADICIONE ESTA LINHA

@@ -90,7 +90,10 @@ class ServicoRepository {
       idServico:     tempId,
       nomeServico:   dto.nomeServico,
       descricao:     dto.descricao,
-      precoUnitario: dto.precoUnitario,
+      precoUnitario: IvaUtil.comIva(
+          dto.precoUnitario, ConfiguracaoService.instance.ivaPercentual),
+      precoSemIva:   dto.precoUnitario,
+      ivaAplicado:   ConfiguracaoService.instance.ivaPercentual,
       unidade:       dto.unidade,
       ativo:         true,
       syncStatus:    'pending',
@@ -125,7 +128,10 @@ class ServicoRepository {
       idServico:     id,
       nomeServico:   dto.nomeServico,
       descricao:     dto.descricao,
-      precoUnitario: dto.precoUnitario,
+      precoUnitario: IvaUtil.comIva(
+          dto.precoUnitario, ConfiguracaoService.instance.ivaPercentual),
+      precoSemIva:   dto.precoUnitario,
+      ivaAplicado:   ConfiguracaoService.instance.ivaPercentual,
       unidade:       dto.unidade,
       ativo:         (existente?['ativo'] as int? ?? 1) == 1,
       syncStatus:    'pending',

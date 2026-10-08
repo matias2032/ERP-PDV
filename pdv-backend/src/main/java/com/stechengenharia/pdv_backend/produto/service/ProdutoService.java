@@ -1,6 +1,8 @@
 package com.stechengenharia.pdv_backend.produto.service;
 
 import com.stechengenharia.pdv_backend.categoria.repository.ProdutoCategoriaRepository;
+import com.stechengenharia.pdv_backend.common.util.IvaUtil;
+import com.stechengenharia.pdv_backend.configuracao.service.ConfiguracaoService;
 import com.stechengenharia.pdv_backend.categoria.entity.ProdutoCategoria;
 import com.stechengenharia.pdv_backend.produto.dto.ProdutoImagemRequestDTO;
 import com.stechengenharia.pdv_backend.produto.dto.ProdutoRequestDTO;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,7 @@ public class ProdutoService {
     private final ProdutoImagemRepository produtoImagemRepository;
     private final ProdutoMarcaRepository produtoMarcaRepository; 
     private final EntityManager entityManager;
+    private final ConfiguracaoService configuracaoService;
     private static final Logger log = LoggerFactory.getLogger(ProdutoService.class);
 
 
@@ -48,7 +52,10 @@ public ProdutoResponseDTO criar(ProdutoRequestDTO dto) {
     Produto produto = new Produto();
     produto.setNomeProduto(dto.getNomeProduto());
     produto.setDescricao(dto.getDescricao());
-    produto.setPreco(dto.getPreco());
+    BigDecimal iva = configuracaoService.getIvaPercentual();
+    produto.setPrecoSemIva(dto.getPreco());
+    produto.setIvaAplicado(iva);
+    produto.setPreco(IvaUtil.comIva(dto.getPreco(), iva));
     produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
     produto.setPrecoPromocional(dto.getPrecoPromocional());
     produto.setSyncStatus("PENDING_CREATE"); // AuditableEntity já faz isto por defeito
@@ -82,7 +89,11 @@ Produto produto = produtoRepository.findByIdProdutoAndDeletedFalse(id)
     
     produto.setNomeProduto(dto.getNomeProduto());
     produto.setDescricao(dto.getDescricao());
-    produto.setPreco(dto.getPreco());
+    // recalcula com o IVA vigente; o preço base vem sempre do DTO, sem cascata
+    BigDecimal iva = configuracaoService.getIvaPercentual();
+    produto.setPrecoSemIva(dto.getPreco());
+    produto.setIvaAplicado(iva);
+    produto.setPreco(IvaUtil.comIva(dto.getPreco(), iva));
     produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
     produto.setPrecoPromocional(dto.getPrecoPromocional());
     
@@ -320,6 +331,8 @@ private ProdutoResponseDTO mapToResponseDTO(Produto produto) {
     dto.setNomeProduto(produto.getNomeProduto());
     dto.setDescricao(produto.getDescricao());
     dto.setPreco(produto.getPreco());
+    dto.setPrecoSemIva(produto.getPrecoSemIva());
+    dto.setIvaAplicado(produto.getIvaAplicado());
     dto.setQuantidadeEstoque(produto.getQuantidadeEstoque());
     dto.setPrecoPromocional(produto.getPrecoPromocional());
     dto.setAtivo(produto.getAtivo());

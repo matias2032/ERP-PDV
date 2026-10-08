@@ -11,6 +11,8 @@ public class ServicoResponseDTO {
     public String     nomeServico;
     public String     descricao;
     public BigDecimal precoUnitario;
+    public BigDecimal precoSemIva;
+    public BigDecimal ivaAplicado;
     public String     unidade;
     public Boolean    ativo;
 
@@ -21,6 +23,8 @@ public class ServicoResponseDTO {
             String nomeServico,
             String descricao,
             BigDecimal precoUnitario,
+            BigDecimal precoSemIva,
+            BigDecimal ivaAplicado,
             String unidade,
             Boolean ativo) {
 
@@ -29,6 +33,8 @@ public class ServicoResponseDTO {
         dto.nomeServico   = nomeServico;
         dto.descricao     = descricao;
         dto.precoUnitario = precoUnitario;
+        dto.precoSemIva   = precoSemIva;
+        dto.ivaAplicado   = ivaAplicado;
         dto.unidade       = unidade;
         dto.ativo         = ativo;
         return dto;
