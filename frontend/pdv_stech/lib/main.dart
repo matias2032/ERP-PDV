@@ -290,6 +290,7 @@ ChangeNotifierProvider(
            '/gerenciar_despesas': (_) => const DespesaListScreen(),
            '/despesas_excluidas': (_) => const DespesasExcluidasScreen(),
            '/importar_backup': (_) => const ImportarBackupScreen(),
+           '/exportar_backup': (_) => const ExportarBackupScreen(),
            
            
         },

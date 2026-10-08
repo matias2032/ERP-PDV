@@ -39,7 +39,8 @@ class _Prog {
 }
 
 class ImportarBackupScreen extends StatefulWidget {
-  const ImportarBackupScreen({super.key});
+    const ImportarBackupScreen({super.key, this.caminhoInicial});
+  final String? caminhoInicial;
 
   @override
   State<ImportarBackupScreen> createState() => _ImportarBackupScreenState();
@@ -55,6 +56,12 @@ class _ImportarBackupScreenState extends State<ImportarBackupScreen> {
   bool _ocupado = false;
 
   String? get _nomeFicheiro => _caminho?.split(RegExp(r'[\\/]')).last;
+
+    @override
+  void initState() {
+    super.initState();
+    _caminho = widget.caminhoInicial;
+  }
 
   @override
   void dispose() {

@@ -45,6 +45,7 @@ static const String _baseUrlFromEnv = String.fromEnvironment(
   static const String cotacoes = '/api/cotacoes';
   static const String despesas = '/api/despesas';
   static const String _sync = '/api/sync';
+  static const String _backup = '/api/backup';
 
   // ── URLs completas ────────────────────────────────────────────────
 
@@ -67,10 +68,13 @@ static const String _baseUrlFromEnv = String.fromEnvironment(
   static String get cotacoesUrl => '$baseUrl$cotacoes';
   static String get despesasUrl => '$baseUrl$despesas';
   static String get syncBatchUrl => '$baseUrl$_sync/batch';
+  static String get backupTabelasUrl   => '$baseUrl$_backup/tabelas';
+  static String get backupExportarUrl  => '$baseUrl$_backup/exportar';
 
   // ── Configurações gerais ──────────────────────────────────────────
 
   static const Duration timeout = Duration(seconds: 30);
+  static const Duration backupTimeout = Duration(minutes: 5);
 
   static Map<String, String> get defaultHeaders => const {
         'Content-Type': 'application/json',

@@ -89,6 +89,9 @@ export 'core/database/daos/documento_fiscal_dao.dart';
 export 'core/database/daos/produto_dao.dart';
 export 'core/constants/constantes_fiscais.dart';
 export 'core/backup/backup_import_service.dart';
+export 'core/backup/backup_export_service.dart';
+
+
 
 // 6. repositories
 export 'repository/cliente_repository.dart';
