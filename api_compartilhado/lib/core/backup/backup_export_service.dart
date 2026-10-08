@@ -52,6 +52,12 @@ class BackupExportException implements Exception {
 }
 
 class BackupExportService {
+
+  static String? chaveSessao;
+  Map<String, String> get _headers => {
+        ...ApiConfig.defaultHeaders,
+        if (chaveSessao != null) 'X-Backup-Key': chaveSessao!,
+      };
   // ── Lista de tabelas ──────────────────────────────────────────────
 
   Future<List<TabelaBackup>> listarTabelas() async {

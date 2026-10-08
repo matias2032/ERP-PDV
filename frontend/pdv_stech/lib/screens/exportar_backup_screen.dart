@@ -547,6 +547,37 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
     );
   }
 
+    Future<bool> _garantirChave() async {
+    if (BackupExportService.chaveSessao != null) return true;
+    final ctrl = TextEditingController();
+    final chave = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Chave de backup'),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Chave do administrador',
+            helperText: 'Fica apenas em memória durante esta sessão.',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Continuar')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (chave == null || chave.isEmpty) return false;
+    BackupExportService.chaveSessao = chave;
+    return true;
+  }
+
   // ── Helpers visuais ───────────────────────────────────────────────
 
   Widget _titulo(String t) => Text(t,
