@@ -81,11 +81,11 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
   ExportResultado? _res;
   String? _guardadoEm;
 
-  @override
-  void initState() {
-    super.initState();
-    _carregar();
-  }
+@override
+void initState() {
+  super.initState();
+  _carregando = false; // a lista carrega-se depois de haver chave
+}
 
   @override
   void dispose() {
@@ -95,20 +95,25 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
 
   // ── Acções ────────────────────────────────────────────────────────
 
-  Future<void> _carregar() async {
-    setState(() {
-      _carregando = true;
-      _erroLista = null;
-    });
-    try {
-      final t = await _servico.listarTabelas();
-      if (mounted) setState(() => _tabelas = t);
-    } on BackupExportException catch (e) {
-      if (mounted) setState(() => _erroLista = e.mensagem);
-    } finally {
-      if (mounted) setState(() => _carregando = false);
-    }
+Future<void> _carregar() async {
+  if (!await _garantirChave()) {
+    if (mounted) setState(() => _erroLista = 'Chave de backup necessária.');
+    return;
   }
+  setState(() {
+    _carregando = true;
+    _erroLista = null;
+  });
+  try {
+    final t = await _servico.listarTabelas();
+    if (mounted) setState(() => _tabelas = t);
+  } on BackupExportException catch (e) {
+    if (e.mensagem.contains('Chave')) BackupExportService.chaveSessao = null;
+    if (mounted) setState(() => _erroLista = e.mensagem);
+  } finally {
+    if (mounted) setState(() => _carregando = false);
+  }
+}
 
   void _selecionarCompativeis() => setState(() {
         _sel
@@ -124,11 +129,13 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
       });
 
   Future<void> _exportar() async {
-    if (_ocupado) return;
-    if (!_completo && _sel.isEmpty) {
-      _snack('Seleccione pelo menos uma tabela.', context.cores.aviso);
-      return;
-    }
+  if (_ocupado) return;
+  if (!_completo && _sel.isEmpty) {
+    _snack('Seleccione pelo menos uma tabela.', context.cores.aviso);
+    return;
+  }
+    if (!await _garantirChave()) return;
+
     HapticFeedback.selectionClick();
     setState(() {
       _ocupado = true;
@@ -149,8 +156,9 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
       setState(() => _res = res);
       await _guardar();
     } on BackupExportException catch (e) {
-      if (mounted) setState(() => _erro = e.mensagem);
-    } catch (e) {
+    if (e.mensagem.contains('Chave')) BackupExportService.chaveSessao = null;
+    if (mounted) setState(() => _erro = e.mensagem);
+  } catch (e) {
       if (mounted) setState(() => _erro = 'Erro inesperado: $e');
     } finally {
       if (mounted) setState(() => _ocupado = false);
@@ -305,8 +313,12 @@ class _ExportarBackupScreenState extends State<ExportarBackupScreen> {
                   label: Text('Escolher tabelas')),
             ],
             selected: {_completo},
-            onSelectionChanged:
-                _ocupado ? null : (s) => setState(() => _completo = s.first),
+           onSelectionChanged: _ocupado
+    ? null
+    : (s) {
+        setState(() => _completo = s.first);
+        if (!_completo && _tabelas.isEmpty) _carregar();
+      },
           ),
         ),
         if (_completo)

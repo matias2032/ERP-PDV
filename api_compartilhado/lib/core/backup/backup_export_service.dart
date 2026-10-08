@@ -62,10 +62,9 @@ class BackupExportService {
 
   Future<List<TabelaBackup>> listarTabelas() async {
     try {
-      final r = await http
-          .get(Uri.parse(ApiConfig.backupTabelasUrl),
-              headers: ApiConfig.defaultHeaders)
-          .timeout(ApiConfig.backupTimeout);
+final r = await http
+    .get(Uri.parse(ApiConfig.backupTabelasUrl), headers: _headers)
+    .timeout(ApiConfig.backupTimeout);
       if (r.statusCode != 200) {
         throw BackupExportException(_mensagem(r.statusCode, r.body));
       }
@@ -92,8 +91,8 @@ class BackupExportService {
     final client = http.Client();
     File? ficheiro;
     try {
-      final req = http.Request('POST', Uri.parse(ApiConfig.backupExportarUrl))
-        ..headers.addAll(ApiConfig.defaultHeaders)
+final req = http.Request('POST', Uri.parse(ApiConfig.backupExportarUrl))
+  ..headers.addAll(_headers)
         ..body = jsonEncode({
           'tabelas': (tabelas == null || tabelas.isEmpty) ? null : tabelas,
           'formato': formato.api,
@@ -176,12 +175,13 @@ class BackupExportService {
         if (m != null && m.toString().isNotEmpty) return m.toString();
       }
     } catch (_) {}
-    return switch (codigo) {
-      400 => 'Pedido inválido (tabelas ou formato não aceites pelo servidor).',
-      401 || 403 => 'Sem permissão para exportar backups.',
-      404 => 'Endpoint de backup não encontrado no servidor.',
-      _ => 'Erro do servidor ($codigo).',
-    };
+return switch (codigo) {
+  400 => 'Pedido inválido (tabelas ou formato não aceites pelo servidor).',
+  401 || 403 => 'Chave de backup inválida ou em falta.',
+  404 => 'Endpoint de backup não encontrado no servidor.',
+  503 => 'Backup desactivado no servidor (BACKUP_API_KEY não definida).',
+  _ => 'Erro do servidor ($codigo).',
+};
   }
 
   static String _erroRede(Object e) {
