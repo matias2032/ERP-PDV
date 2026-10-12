@@ -12,8 +12,7 @@ import com.stechengenharia.pdv_backend.produto.entity.ProdutoImagem;
 import com.stechengenharia.pdv_backend.produto.entity.ProdutoMarca;
 import com.stechengenharia.pdv_backend.produto.repository.ProdutoImagemRepository;
 import com.stechengenharia.pdv_backend.produto.repository.ProdutoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 
 import jakarta.persistence.EntityManager;
@@ -40,7 +39,7 @@ public class ProdutoService {
     private final ProdutoMarcaRepository produtoMarcaRepository; 
     private final EntityManager entityManager;
     private final ConfiguracaoService configuracaoService;
-    private static final Logger log = LoggerFactory.getLogger(ProdutoService.class);
+
 
 
     // ===== CRUD BÁSICO =====
@@ -131,7 +130,7 @@ Produto produto = produtoRepository.findByIdProdutoAndDeletedFalse(id)
     }
     
     // ✅ BUSCAR O PRODUTO NOVAMENTE DO BANCO
-    Produto produtoFinal = produtoRepository.findById(id)
+    Produto produtoFinal = produtoRepository.findByIdProdutoAndDeletedFalse(id)
             .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
     
     ProdutoResponseDTO response = mapToResponseDTO(produtoFinal);
@@ -162,7 +161,7 @@ private void removerTodasMarcas(Integer idProduto) {
 public void toggleAtivo(Integer id) {
     log.info("Alternando status de ativação do produto ID: {}", id);
     
-    Produto produto = produtoRepository.findById(id)
+    Produto produto = produtoRepository.findByIdProdutoAndDeletedFalse(id)
             .orElseThrow(() -> new RuntimeException("Produto não encontrado com ID: " + id));
     
     // ✅ MUDANÇA: Comparação com Short

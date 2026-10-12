@@ -25,7 +25,7 @@ class LocalDatabase {
 
 _db = await openDatabase(
   path,
-  version: 6,       
+  version: 7,       
   onCreate:    _onCreate,
   onUpgrade:   _onUpgrade,
   onConfigure: _onConfigure,
@@ -69,7 +69,30 @@ if (oldVersion < 4) {
       ALTER TABLE documento_fiscal ADD COLUMN motivo_retificacao TEXT;
     ''');
   }
+
+    if (oldVersion < 7) {
+    await _addColumnIfMissing(db, 'produto', 'preco_sem_iva', 'REAL');
+    await _addColumnIfMissing(db, 'produto', 'iva_aplicado',  'REAL');
+    await _addColumnIfMissing(db, 'servico', 'preco_sem_iva', 'REAL');
+    await _addColumnIfMissing(db, 'servico', 'iva_aplicado',  'REAL');
+    // Linhas antigas ficam com NULL: fromLocalDb() recalcula com
+    // IvaUtil.semIva(preco, ivaConfig). Sem backfill necessário.
+  }
 }
+
+  /// ALTER TABLE idempotente — evita erro "duplicate column".
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String tabela,
+    String coluna,
+    String tipo,
+  ) async {
+    final cols = await db.rawQuery('PRAGMA table_info($tabela)');
+    final existe = cols.any((c) => c['name'] == coluna);
+    if (!existe) {
+      await db.execute('ALTER TABLE $tabela ADD COLUMN $coluna $tipo');
+    }
+  }
   /// Activa foreign keys no SQLite (desactivadas por defeito).
   Future<void> _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
@@ -218,6 +241,8 @@ CREATE TABLE despesa (
           nome_produto        TEXT    NOT NULL,
           descricao           TEXT,
           preco               REAL    NOT NULL,
+          preco_sem_iva       REAL,
+          iva_aplicado        REAL,
           preco_promocional   REAL,
           quantidade_estoque  INTEGER NOT NULL DEFAULT 0,
           ativo               INTEGER NOT NULL DEFAULT 1,
@@ -362,6 +387,8 @@ await txn.execute('''
     nome_servico    TEXT    NOT NULL,
     descricao       TEXT,
     preco_unitario  REAL    NOT NULL,
+    preco_sem_iva   REAL,
+    iva_aplicado    REAL,
     unidade         TEXT    NOT NULL DEFAULT 'página',
     ativo           INTEGER NOT NULL DEFAULT 1,
     sync_status     TEXT    NOT NULL DEFAULT 'synced',

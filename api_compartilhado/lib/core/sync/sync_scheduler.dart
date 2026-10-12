@@ -897,7 +897,7 @@ default:
         final dto = ProdutoRequestModel(
           nomeProduto: payload['nomeProduto'] as String,
           descricao: payload['descricao'] as String?,
-          preco: (payload['preco'] as num).toDouble(),
+          precoSemIva: (payload['preco'] as num).toDouble(), // base (sem IVA)
           quantidadeEstoque: payload['quantidadeEstoque'] as int,
           precoPromocional: payload['precoPromocional'] != null
               ? (payload['precoPromocional'] as num).toDouble()
@@ -913,18 +913,14 @@ default:
         );
         final criado = await service.criar(dto);
         if (localId != null) await dao.deleteByLocalId(localId);
-        await dao.upsert(
-          ProdutoModel.fromJson(
-            {'idProduto': criado.idProduto, ...criado.toJson()},
-          ).toLocalDb(),
-        );
+        await dao.upsert(criado.toLocalDb());
 
       case 'UPDATE':
         final id = payload['id'] as int;
         final dto = ProdutoRequestModel(
           nomeProduto: payload['nomeProduto'] as String,
           descricao: payload['descricao'] as String?,
-          preco: (payload['preco'] as num).toDouble(),
+          precoSemIva: (payload['preco'] as num).toDouble(), // base (sem IVA)
           quantidadeEstoque: payload['quantidadeEstoque'] as int,
           precoPromocional: payload['precoPromocional'] != null
               ? (payload['precoPromocional'] as num).toDouble()
@@ -962,7 +958,7 @@ default:
         final dto = ServicoRequestModel(
           nomeServico: payload['nomeServico'] as String,
           descricao: payload['descricao'] as String?,
-          precoUnitario: (payload['precoUnitario'] as num).toDouble(),
+          precoSemIva: (payload['precoUnitario'] as num).toDouble(), // base (sem IVA)
           unidade: payload['unidade'] as String,
         );
         final criado = await service.criar(dto);
@@ -974,7 +970,7 @@ default:
         final dto = ServicoRequestModel(
           nomeServico: payload['nomeServico'] as String,
           descricao: payload['descricao'] as String?,
-          precoUnitario: (payload['precoUnitario'] as num).toDouble(),
+          precoSemIva: (payload['preco'] as num).toDouble(), // base (sem IVA)
           unidade: payload['unidade'] as String,
         );
         final editado = await service.actualizar(id, dto);
@@ -1209,13 +1205,24 @@ case 'despesa':
       case 'produto':
         if (operacao == 'CREATE' && localId != null && idReal != null) {
           await _produtoDao!.deleteByLocalId(localId);
+          try {
+            final real = await _produtoService!.buscarPorId(idReal);
+            await _produtoDao!.upsert(real.toLocalDb());
+          } catch (e) {
+            debugPrint('⚠️ SyncScheduler — pull produto $idReal falhou: $e');
+          }
         }
 
       case 'servico':
         if (operacao == 'CREATE' && localId != null && idReal != null) {
           await _servicoDao!.deleteByLocalId(localId);
+          try {
+            final real = await _servicoService!.buscarPorId(idReal);
+            await _servicoDao!.upsert(real.toLocalDb());
+          } catch (e) {
+            debugPrint('⚠️ SyncScheduler — pull serviço $idReal falhou: $e');
+          }
         }
-
       case 'cotacao':
         if (operacao == 'CREATE' && localId != null && idReal != null) {
           final tempRow = await _cotacaoDao!.getByLocalId(localId);

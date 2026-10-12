@@ -5,20 +5,24 @@ class ServicoModel {
   final int idServico;
   final String nomeServico;
   final String? descricao;
-  final double precoUnitario;   // preço FINAL (com IVA) — é o que o PDV vende
+
+  /// Preço FINAL (com IVA) — é o que o PDV vende.
+  final double precoUnitario;
+
+  /// Preço BASE (sem IVA) — é o que se edita no formulário.
   final double precoSemIva;
   final double ivaAplicado;
   final String unidade; // página, folha, unidade…
   final bool ativo;
   final String syncStatus;
-final String? localId;
+  final String? localId;
 
-bool get isPending  => syncStatus == 'pending';
-bool get isSynced   => syncStatus == 'synced';
-bool get isConflict => syncStatus == 'conflict';
-bool get isOffline  => isPending;
+  bool get isPending => syncStatus == 'pending';
+  bool get isSynced => syncStatus == 'synced';
+  bool get isConflict => syncStatus == 'conflict';
+  bool get isOffline => isPending;
 
-const ServicoModel({
+  const ServicoModel({
     required this.idServico,
     required this.nomeServico,
     this.descricao,
@@ -31,11 +35,11 @@ const ServicoModel({
     this.localId,
   });
 
-factory ServicoModel.fromJson(Map<String, dynamic> json) {
+  factory ServicoModel.fromJson(Map<String, dynamic> json) {
     final precoUnit = (json['precoUnitario'] as num).toDouble();
     final iva = (json['ivaAplicado'] as num?)?.toDouble() ??
         ConfiguracaoService.instance.ivaPercentual;
-        
+
     return ServicoModel(
       idServico: json['idServico'] as int,
       nomeServico: json['nomeServico'] as String,
@@ -51,11 +55,11 @@ factory ServicoModel.fromJson(Map<String, dynamic> json) {
     );
   }
 
-Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() => {
         'idServico': idServico,
         'nomeServico': nomeServico,
         'descricao': descricao,
-        'precoUnitario': precoUnitario,
+        'precoUnitario': precoUnitario, // FINAL (com IVA)
         'precoSemIva': precoSemIva,
         'ivaAplicado': ivaAplicado,
         'unidade': unidade,
@@ -64,7 +68,7 @@ Map<String, dynamic> toJson() => {
         'localId': localId,
       };
 
-ServicoModel copyWith({
+  ServicoModel copyWith({
     int? idServico,
     String? nomeServico,
     String? descricao,
@@ -89,7 +93,8 @@ ServicoModel copyWith({
       localId: localId ?? this.localId,
     );
   }
-factory ServicoModel.fromLocalDb(Map<String, dynamic> row) {
+
+  factory ServicoModel.fromLocalDb(Map<String, dynamic> row) {
     final precoUnit = (row['preco_unitario'] as num).toDouble();
     final iva = (row['iva_aplicado'] as num?)?.toDouble() ??
         ConfiguracaoService.instance.ivaPercentual;
@@ -109,7 +114,7 @@ factory ServicoModel.fromLocalDb(Map<String, dynamic> row) {
     );
   }
 
-Map<String, dynamic> toLocalDb() => {
+  Map<String, dynamic> toLocalDb() => {
         'id': idServico,
         'local_id': localId,
         'nome_servico': nomeServico,
@@ -123,7 +128,6 @@ Map<String, dynamic> toLocalDb() => {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-
   @override
   String toString() =>
       'ServicoModel(id: $idServico, nome: $nomeServico, ativo: $ativo)';
@@ -135,20 +139,23 @@ Map<String, dynamic> toLocalDb() => {
 class ServicoRequestModel {
   final String nomeServico;
   final String? descricao;
-  final double precoUnitario;
+
+  /// Preço BASE (sem IVA). O backend calcula o preço final.
+  final double precoSemIva;
   final String unidade;
 
   const ServicoRequestModel({
     required this.nomeServico,
     this.descricao,
-    required this.precoUnitario,
+    required this.precoSemIva,
     required this.unidade,
   });
 
   Map<String, dynamic> toJson() => {
         'nomeServico': nomeServico,
         'descricao': descricao,
-        'precoUnitario': precoUnitario,
+        // Chave JSON mantida: ServicoRequestDTO.precoUnitario (valor = base)
+        'precoUnitario': precoSemIva,
         'unidade': unidade,
       };
 }

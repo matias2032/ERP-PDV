@@ -31,54 +31,51 @@ public class ServicoService {
     // ════════════════════════════════════════════════════════════════════════
 
     @Transactional
-public ServicoResponseDTO criar(ServicoRequestDTO dto) {
-    log.info("Criando serviço: {}", dto.nomeServico);
+    public ServicoResponseDTO criar(ServicoRequestDTO dto) {
+        log.info("Criando serviço: {}", dto.nomeServico);
 
-    if (servicoRepository.existsByNomeServicoIgnoreCase(dto.nomeServico)) {
-        throw new ServicoNomeDuplicadoException(dto.nomeServico);
+        if (servicoRepository.existsByNomeServicoIgnoreCase(dto.nomeServico)) {
+            throw new ServicoNomeDuplicadoException(dto.nomeServico);
+        }
+
+        Servico servico = new Servico();
+        servico.setNomeServico(dto.nomeServico);
+        servico.setDescricao(dto.descricao);
+        aplicarPreco(servico, dto.precoUnitario);   // dto.precoUnitario = preço BASE (sem IVA)
+        servico.setUnidade(dto.unidade);
+        servico.setAtivo(true);
+        servico.setSyncStatus("PENDING_CREATE"); // AuditableEntity já define, mas explícito
+
+        servico = servicoRepository.save(servico);
+        log.info("Serviço criado: id={}, nome={}", servico.getIdServico(), servico.getNomeServico());
+        return toResponseDTO(servico);
     }
-
-    Servico servico = new Servico();
-    servico.setNomeServico(dto.nomeServico);
-    servico.setDescricao(dto.descricao);
-    BigDecimal iva = configuracaoService.getIvaPercentual();
-    servico.setPrecoSemIva(dto.precoUnitario);
-    servico.setIvaAplicado(iva);
-    servico.setPrecoUnitario(IvaUtil.comIva(dto.precoUnitario, iva));
-    servico.setUnidade(dto.unidade);
-    servico.setAtivo(true);
-    servico.setSyncStatus("PENDING_CREATE"); // AuditableEntity já define, mas explícito
-
-    servico = servicoRepository.save(servico);
-    log.info("Serviço criado: id={}, nome={}", servico.getIdServico(), servico.getNomeServico());
-    return toResponseDTO(servico);
-}
 
     // ════════════════════════════════════════════════════════════════════════
     // ACTUALIZAR
     // ════════════════════════════════════════════════════════════════════════
-@Transactional
-public ServicoResponseDTO actualizar(Integer id, ServicoRequestDTO dto) {
-    log.info("Actualizando serviço id={}", id);
 
-    // era: buscarEntidade(id) → findById sem filtro deleted
-    Servico servico = servicoRepository.findByIdServicoAndDeletedFalse(id)
-            .orElseThrow(() -> new ServicoNaoEncontradoException(id));
+    @Transactional
+    public ServicoResponseDTO actualizar(Integer id, ServicoRequestDTO dto) {
+        log.info("Actualizando serviço id={}", id);
 
-    if (servicoRepository.existsByNomeServicoIgnoreCaseAndIdServicoNot(dto.nomeServico, id)) {
-        throw new ServicoNomeDuplicadoException(dto.nomeServico);
+        Servico servico = servicoRepository.findByIdServicoAndDeletedFalse(id)
+                .orElseThrow(() -> new ServicoNaoEncontradoException(id));
+
+        if (servicoRepository.existsByNomeServicoIgnoreCaseAndIdServicoNot(dto.nomeServico, id)) {
+            throw new ServicoNomeDuplicadoException(dto.nomeServico);
+        }
+
+        servico.setNomeServico(dto.nomeServico);
+        servico.setDescricao(dto.descricao);
+        aplicarPreco(servico, dto.precoUnitario);   // recalcula com o IVA vigente; base vem sempre do DTO
+        servico.setUnidade(dto.unidade);
+        // @PreUpdate do AuditableEntity muda syncStatus → PENDING_UPDATE automaticamente
+
+        servico = servicoRepository.save(servico);
+        log.info("Serviço id={} actualizado", id);
+        return toResponseDTO(servico);
     }
-
-    servico.setNomeServico(dto.nomeServico);
-    servico.setDescricao(dto.descricao);
-    servico.setPrecoUnitario(dto.precoUnitario);
-    servico.setUnidade(dto.unidade);
-    // @PreUpdate do AuditableEntity muda syncStatus → PENDING_UPDATE automaticamente
-
-    servico = servicoRepository.save(servico);
-    log.info("Serviço id={} actualizado", id);
-    return toResponseDTO(servico);
-}
 
     // ════════════════════════════════════════════════════════════════════════
     // TOGGLE ACTIVO/INACTIVO  (em vez de delete físico)
@@ -98,15 +95,15 @@ public ServicoResponseDTO actualizar(Integer id, ServicoRequestDTO dto) {
     }
 
     @Transactional
-public void deletar(Integer id) {
-    Servico servico = servicoRepository.findByIdServicoAndDeletedFalse(id)
-            .orElseThrow(() -> new ServicoNaoEncontradoException(id));
-    servico.setDeleted(true);
-    servico.setAtivo(false);              // invisível no PDV também
-    servico.setSyncStatus("PENDING_DELETE");
-    servicoRepository.save(servico);
-    log.info("Serviço id={} marcado como eliminado", id);
-}
+    public void deletar(Integer id) {
+        Servico servico = servicoRepository.findByIdServicoAndDeletedFalse(id)
+                .orElseThrow(() -> new ServicoNaoEncontradoException(id));
+        servico.setDeleted(true);
+        servico.setAtivo(false);              // invisível no PDV também
+        servico.setSyncStatus("PENDING_DELETE");
+        servicoRepository.save(servico);
+        log.info("Serviço id={} marcado como eliminado", id);
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // CONSULTAS
@@ -118,21 +115,21 @@ public void deletar(Integer id) {
     }
 
     /** Lista todos os serviços (activos e inactivos) — para o painel de gestão. */
-@Transactional(readOnly = true)
-public List<ServicoResponseDTO> listarTodos() {
-    return servicoRepository.findByDeletedFalse()           // era findAllByOrderByNomeServicoAsc
-            .stream()
-            .map(this::toResponseDTO)
-            .collect(Collectors.toList());
-}
+    @Transactional(readOnly = true)
+    public List<ServicoResponseDTO> listarTodos() {
+        return servicoRepository.findByDeletedFalseOrderByNomeServicoAsc()
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
 
-@Transactional(readOnly = true)
-public List<ServicoResponseDTO> listarAtivos() {
-    return servicoRepository.findByAtivoTrueAndDeletedFalse() // era findByAtivoTrue
-            .stream()
-            .map(this::toResponseDTO)
-            .collect(Collectors.toList());
-}
+    @Transactional(readOnly = true)
+    public List<ServicoResponseDTO> listarAtivos() {
+        return servicoRepository.findByAtivoTrueAndDeletedFalseOrderByNomeServicoAsc()
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // MÉTODO PARA USO INTERNO (ex: PedidoService)
@@ -156,10 +153,18 @@ public List<ServicoResponseDTO> listarAtivos() {
     // PRIVADOS
     // ════════════════════════════════════════════════════════════════════════
 
-private Servico buscarEntidade(Integer id) {
-    return servicoRepository.findByIdServicoAndDeletedFalse(id) // era findById
-            .orElseThrow(() -> new ServicoNaoEncontradoException(id));
-}
+    /** Preço base → grava base, IVA vigente e preço final. Usado por criar e actualizar. */
+    private void aplicarPreco(Servico servico, BigDecimal precoBase) {
+        BigDecimal iva = configuracaoService.getIvaPercentual();
+        servico.setPrecoSemIva(precoBase);
+        servico.setIvaAplicado(iva);
+        servico.setPrecoUnitario(IvaUtil.comIva(precoBase, iva));
+    }
+
+    private Servico buscarEntidade(Integer id) {
+        return servicoRepository.findByIdServicoAndDeletedFalse(id)
+                .orElseThrow(() -> new ServicoNaoEncontradoException(id));
+    }
 
     private ServicoResponseDTO toResponseDTO(Servico s) {
         return ServicoResponseDTO.of(

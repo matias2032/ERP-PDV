@@ -2,11 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../repository/servico_repository.dart';
-import '../../../core/database/daos/servico_dao.dart';
-import '../../../core/database/daos/sync_queue_dao.dart';
-import '../../../core/connectivity/connectivity_service.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
-
 class ServicoProvider with ChangeNotifier {
   final ServicoRepository _repository;
 

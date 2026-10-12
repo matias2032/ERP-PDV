@@ -84,16 +84,18 @@ class ServicoRepository {
       }
     }
 
+    // Offline: estimativa local com o IVA actual. O backend recalcula
+    // no sync com o IVA vigente nesse momento.
+    final iva     = ConfiguracaoService.instance.ivaPercentual;
     final localId = _uuid.v4();
     final tempId  = -(DateTime.now().millisecondsSinceEpoch);
     final local   = ServicoModel(
       idServico:     tempId,
       nomeServico:   dto.nomeServico,
       descricao:     dto.descricao,
-      precoUnitario: IvaUtil.comIva(
-          dto.precoUnitario, ConfiguracaoService.instance.ivaPercentual),
-      precoSemIva:   dto.precoUnitario,
-      ivaAplicado:   ConfiguracaoService.instance.ivaPercentual,
+      precoUnitario: IvaUtil.comIva(dto.precoSemIva, iva),
+      precoSemIva:   dto.precoSemIva,
+      ivaAplicado:   iva,
       unidade:       dto.unidade,
       ativo:         true,
       syncStatus:    'pending',
@@ -123,15 +125,15 @@ class ServicoRepository {
       }
     }
 
+    final iva       = ConfiguracaoService.instance.ivaPercentual;
     final existente = await _dao.getById(id);
     final local = ServicoModel(
       idServico:     id,
       nomeServico:   dto.nomeServico,
       descricao:     dto.descricao,
-      precoUnitario: IvaUtil.comIva(
-          dto.precoUnitario, ConfiguracaoService.instance.ivaPercentual),
-      precoSemIva:   dto.precoUnitario,
-      ivaAplicado:   ConfiguracaoService.instance.ivaPercentual,
+      precoUnitario: IvaUtil.comIva(dto.precoSemIva, iva),
+      precoSemIva:   dto.precoSemIva,
+      ivaAplicado:   iva,
       unidade:       dto.unidade,
       ativo:         (existente?['ativo'] as int? ?? 1) == 1,
       syncStatus:    'pending',

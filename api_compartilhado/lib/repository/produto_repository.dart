@@ -86,11 +86,14 @@ class ProdutoRepository {
 
     final localId = _uuid.v4();
     final tempId  = -(DateTime.now().millisecondsSinceEpoch);
+    final iva     = ConfiguracaoService.instance.ivaPercentual;
     final local   = ProdutoModel(
       idProduto:         tempId,
       nomeProduto:       dto.nomeProduto,
       descricao:         dto.descricao,
-      preco:             dto.preco,
+      preco:             IvaUtil.comIva(dto.precoSemIva, iva),
+      precoSemIva:       dto.precoSemIva,
+      ivaAplicado:       iva,
       quantidadeEstoque: dto.quantidadeEstoque,
       precoPromocional:  dto.precoPromocional,
       ativo:             1,
@@ -123,11 +126,14 @@ await _syncQueueDao.enqueue('produto', 'CREATE', payloadSemRelacoes);
     }
 
     final existente = await _dao.getById(id);
+    final iva       = ConfiguracaoService.instance.ivaPercentual;
     final local = ProdutoModel(
       idProduto:         id,
       nomeProduto:       dto.nomeProduto,
       descricao:         dto.descricao,
-      preco:             dto.preco,
+      preco:             IvaUtil.comIva(dto.precoSemIva, iva),
+      precoSemIva:       dto.precoSemIva,
+      ivaAplicado:       iva,
       quantidadeEstoque: dto.quantidadeEstoque,
       precoPromocional:  dto.precoPromocional,
       ativo:             existente?['ativo'] as int? ?? 1,
