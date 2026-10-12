@@ -6,15 +6,10 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:intl/intl.dart';
 import '../widgets/app_sidebar.dart';
 import '../widgets/filtros_listagem.dart';
+import '../widgets/campo_pesquisa.dart';
+import '../theme/app_theme.dart';
 import 'produto_form_screen.dart';
 import 'package:api_compartilhado/providers/produto_provider.dart';
-
-// ── Paleta STech ─────────────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -60,6 +55,8 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
     });
   }
 
+  /// Filtra pelo preço FINAL (com IVA; promocional se existir) — o mesmo
+  /// valor que o operador vê e cobra.
   List<ProdutoModel> _filtrar(List<ProdutoModel> todos) {
     return todos.where((p) {
       final matchNome = p.nomeProduto.toLowerCase().contains(_busca);
@@ -98,36 +95,40 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
 
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(
-          '${produto.estaAtivo ? 'Desativar' : 'Ativar'} Produto',
-          style: const TextStyle(
-              fontWeight: FontWeight.w700, color: _kAzul, fontSize: 17),
-        ),
-        content: Text(
-          'Tem certeza que deseja $novoStatus o produto "${produto.nomeProduto}"?',
-          style: const TextStyle(fontSize: 14, color: _kCinzaTexto),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: _kCinzaTexto)),
+      builder: (ctx) {
+        final c = ctx.cores;
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(
+            '${produto.estaAtivo ? 'Desativar' : 'Ativar'} Produto',
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: c.marca, fontSize: 17),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  produto.estaAtivo ? Colors.orange : Colors.green,
-              foregroundColor: _kBranco,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+          content: Text(
+            'Tem certeza que deseja $novoStatus o produto "${produto.nomeProduto}"?',
+            style: TextStyle(fontSize: 14, color: c.textoSecundario),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: TextStyle(color: c.textoSecundario)),
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(produto.estaAtivo ? 'Desativar' : 'Ativar'),
-          ),
-        ],
-      ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    produto.estaAtivo ? Colors.orange : Colors.green,
+                foregroundColor: AppColors.branco,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(produto.estaAtivo ? 'Desativar' : 'Ativar'),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmar != true || !mounted) return;
@@ -151,7 +152,7 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao actualizar estado: $erro'),
-          backgroundColor: _kVermelho,
+          backgroundColor: AppColors.vermelhoMarca,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -175,14 +176,14 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: context.cores.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/gerenciar_produtos'),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navegarParaFormulario(),
-        backgroundColor: _kVermelho,
-        child: const Icon(Icons.add, color: _kBranco),
+        backgroundColor: AppColors.vermelhoMarca,
+        child: const Icon(Icons.add, color: AppColors.branco),
       ),
     );
   }
@@ -194,11 +195,11 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.inventory_2_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -210,8 +211,9 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
           ),
         ],
       ),
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       actions: [
         Consumer<ProdutoProvider>(
@@ -227,22 +229,23 @@ class _ProdutoListScreenState extends State<ProdutoListScreen> {
   }
 
   Widget _buildBody() {
+    final c = context.cores;
     final provider = context.watch<ProdutoProvider>();
-    
+
     final marcaProvider = context.watch<MarcaProvider>();
-final categoriaProvider = context.watch<CategoriaProvider>();
+    final categoriaProvider = context.watch<CategoriaProvider>();
 
-final marcasPorId = {
-  for (final marca in marcaProvider.marcas) marca.id: marca.nomeMarca,
-};
+    final marcasPorId = {
+      for (final marca in marcaProvider.marcas) marca.id: marca.nomeMarca,
+    };
 
-final categoriasPorId = {
-  for (final categoria in categoriaProvider.categorias)
-    categoria.id: categoria.nomeCategoria,
-};
+    final categoriasPorId = {
+      for (final categoria in categoriaProvider.categorias)
+        categoria.id: categoria.nomeCategoria,
+    };
 
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.errorMessage != null) {
@@ -250,19 +253,21 @@ final categoriasPorId = {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: _kVermelho),
+            Icon(Icons.error_outline, size: 64, color: c.acentoTexto),
             const SizedBox(height: 16),
             Text(
               provider.errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.acentoTexto),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: provider.listar,
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar Novamente'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: c.marcaBotao,
+                  foregroundColor: AppColors.branco),
             ),
           ],
         ),
@@ -274,12 +279,11 @@ final categoriasPorId = {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inventory_2_outlined,
-                size: 80, color: Colors.grey[400]),
+            Icon(Icons.inventory_2_outlined, size: 80, color: c.desactivado),
             const SizedBox(height: 16),
             Text(
               'Nenhum produto encontrado',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 18, color: c.textoSecundario),
             ),
           ],
         ),
@@ -302,12 +306,11 @@ final categoriasPorId = {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search_off,
-                          size: 72, color: Colors.grey[300]),
+                      Icon(Icons.search_off, size: 72, color: c.desactivado),
                       const SizedBox(height: 12),
                       Text('Nenhum produto corresponde ao filtro',
                           style: TextStyle(
-                              fontSize: 16, color: Colors.grey[500])),
+                              fontSize: 16, color: c.textoSecundario)),
                       TextButton(
                         onPressed: _limparFiltros,
                         child: const Text('Limpar filtros'),
@@ -315,14 +318,15 @@ final categoriasPorId = {
                     ],
                   ),
                 )
-              : RefreshIndicator(
-                  color: _kAzul,
-                  onRefresh: () async => provider.listar(),
-                  child: Column(
-                    children: [
-                      Container( /* cabeçalho da tabela: inalterado */ ),
-                      Expanded(
+              : Column(
+                  children: [
+                    const _CabecalhoTabela(),
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: c.marca,
+                        onRefresh: () => provider.listar(),
                         child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
                           itemCount: filtrados.length,
                           itemBuilder: (_, i) => _ProdutoLinhaTabela(
@@ -337,30 +341,31 @@ final categoriasPorId = {
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
         ),
       ],
     );
   }
 
-    Widget _buildFiltros({
+  Widget _buildFiltros({
     required List<ProdutoModel> todos,
     required Map<int, String> marcasPorId,
     required Map<int, String> categoriasPorId,
     required int totalFiltrado,
   }) {
+    final c = context.cores;
     final precoMaxAbs = todos.isEmpty
         ? 0.0
         : todos.map((p) => p.precoEfectivo).reduce((a, b) => a > b ? a : b);
 
     return Container(
-      color: _kAzul.withOpacity(0.04),
+      color: c.marca.withValues(alpha: 0.04),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
         children: [
-          FiltroPesquisa(
+          CampoPesquisa(
             controller: _searchCtrl,
             hint: 'Pesquisar produto…',
             onChanged: (v) => setState(() => _busca = v.toLowerCase()),
@@ -378,8 +383,10 @@ final categoriasPorId = {
                   precoMin: _precoMin,
                   precoMax: _precoMax,
                   precoMaxAbsoluto: precoMaxAbs,
-                  onChanged: (min, max) =>
-                      setState(() { _precoMin = min; _precoMax = max; }),
+                  onChanged: (min, max) => setState(() {
+                    _precoMin = min;
+                    _precoMax = max;
+                  }),
                 ),
                 const SizedBox(width: 6),
                 FiltroSelecaoMultipla(
@@ -416,7 +423,7 @@ final categoriasPorId = {
                   label: const Text('Limpar filtros',
                       style: TextStyle(fontSize: 11)),
                   style: TextButton.styleFrom(
-                    foregroundColor: _kVermelho,
+                    foregroundColor: c.acentoTexto,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 24),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -425,7 +432,7 @@ final categoriasPorId = {
               else
                 const SizedBox.shrink(),
               Text('$totalFiltrado produto(s) encontrado(s)',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                  style: TextStyle(fontSize: 11, color: c.textoSecundario)),
             ],
           ),
         ],
@@ -435,50 +442,91 @@ final categoriasPorId = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Linha de tabela — sem alterações de lógica, apenas mantida
+// Cabeçalho da tabela — mesmas proporções (flex) das colunas da linha
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProdutoLinhaTabela extends StatelessWidget {
-const _ProdutoLinhaTabela({
-  required this.produto,
-  required this.currencyFmt,
-  required this.isAlternate,
-  required this.marcasPorId,
-  required this.categoriasPorId,
-  required this.onEditar,
-  required this.onToggle,
-});
-
-final ProdutoModel produto;
-final NumberFormat currencyFmt;
-final bool isAlternate;
-final Map<int, String> marcasPorId;
-final Map<int, String> categoriasPorId;
-final VoidCallback onEditar;
-final VoidCallback onToggle;
+class _CabecalhoTabela extends StatelessWidget {
+  const _CabecalhoTabela();
 
   @override
   Widget build(BuildContext context) {
-    final temPromo   = produto.precoPromocional != null;
+    const estilo = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      color: AppColors.branco,
+      letterSpacing: 0.3,
+    );
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      child: const Row(
+        children: [
+          Expanded(flex: 3, child: Text('PRODUTO', style: estilo)),
+          Expanded(flex: 2, child: Text('MARCA', style: estilo)),
+          Expanded(flex: 2, child: Text('CATEGORIA', style: estilo)),
+          Expanded(flex: 2, child: Text('PREÇO', style: estilo)),
+          Expanded(flex: 2, child: Text('ESTOQUE', style: estilo)),
+          Expanded(flex: 1, child: Text('ESTADO', style: estilo)),
+          SizedBox(
+            width: 100,
+            child: Text('AÇÕES', textAlign: TextAlign.end, style: estilo),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Linha de tabela
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProdutoLinhaTabela extends StatelessWidget {
+  const _ProdutoLinhaTabela({
+    required this.produto,
+    required this.currencyFmt,
+    required this.isAlternate,
+    required this.marcasPorId,
+    required this.categoriasPorId,
+    required this.onEditar,
+    required this.onToggle,
+  });
+
+  final ProdutoModel produto;
+  final NumberFormat currencyFmt;
+  final bool isAlternate;
+  final Map<int, String> marcasPorId;
+  final Map<int, String> categoriasPorId;
+  final VoidCallback onEditar;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.cores;
+    final temPromo = produto.precoPromocional != null;
     final semEstoque = produto.quantidadeEstoque <= 0;
 
     final nomeMarca = produto.marcas.isNotEmpty
-    ? marcasPorId[produto.marcas.first] ?? 'Marca #${produto.marcas.first}'
-    : '—';
+        ? marcasPorId[produto.marcas.first] ?? 'Marca #${produto.marcas.first}'
+        : '—';
 
-final nomeCategoria = produto.categorias.isNotEmpty
-    ? categoriasPorId[produto.categorias.first] ??
-        'Categoria #${produto.categorias.first}'
-    : '—';
+    final nomeCategoria = produto.categorias.isNotEmpty
+        ? categoriasPorId[produto.categorias.first] ??
+            'Categoria #${produto.categorias.first}'
+        : '—';
 
-final precoPrincipal = produto.precoPromocional ?? produto.preco;
+    // Preço FINAL (com IVA): promocional se existir, senão o normal.
+    final precoPrincipal = produto.precoPromocional ?? produto.preco;
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : _kBranco,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0)),
-        ),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(bottom: BorderSide(color: c.borda)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -491,111 +539,108 @@ final precoPrincipal = produto.precoPromocional ?? produto.preco;
                 produto.nomeProduto,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
             ),
 
             // Marca
-Expanded(
-  flex: 2,
-  child: Text(
-    nomeMarca,
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: const TextStyle(
-      fontSize: 12,
-      color: _kCinzaTexto,
-      fontWeight: FontWeight.w500,
-    ),
-  ),
-),
+            Expanded(
+              flex: 2,
+              child: Text(
+                nomeMarca,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: c.textoSecundario,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
 
-// Categoria
-Expanded(
-  flex: 2,
-  child: Text(
-    nomeCategoria,
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: const TextStyle(
-      fontSize: 12,
-      color: _kCinzaTexto,
-      fontWeight: FontWeight.w500,
-    ),
-  ),
-),
+            // Categoria
+            Expanded(
+              flex: 2,
+              child: Text(
+                nomeCategoria,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: c.textoSecundario,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
 
-// Preço
-Expanded(
-  flex: 2,
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        currencyFmt.format(precoPrincipal),
-        style: TextStyle(
-          fontSize: 12,
-          color: temPromo ? _kVermelho : _kAzul,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      if (temPromo)
-        Text(
-          currencyFmt.format(produto.preco),
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.grey,
-            decoration: TextDecoration.lineThrough,
-          ),
-        ),
-    ],
-  ),
-),
+            // Preço
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currencyFmt.format(precoPrincipal),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: temPromo ? c.acentoTexto : c.marca,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (temPromo)
+                    Text(
+                      currencyFmt.format(produto.preco),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: c.textoSecundario,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
-// Estoque
-Expanded(
-  flex: 2,
-  child: Row(
-    children: [
-      Icon(
-        semEstoque
-            ? Icons.warning_amber_rounded
-            : Icons.check_circle_outline,
-        size: 14,
-        color: semEstoque ? Colors.red : Colors.green[600],
-      ),
-      const SizedBox(width: 4),
-      Text(
-        semEstoque ? 'Esgotado' : '${produto.quantidadeEstoque}',
-        style: TextStyle(
-          fontSize: 12,
-          color: semEstoque ? Colors.red : Colors.grey[700],
-          fontWeight:
-              semEstoque ? FontWeight.w700 : FontWeight.normal,
-        ),
-      ),
-    ],
-  ),
-),
+            // Estoque
+            Expanded(
+              flex: 2,
+              child: Row(
+                children: [
+                  Icon(
+                    semEstoque
+                        ? Icons.warning_amber_rounded
+                        : Icons.check_circle_outline,
+                    size: 14,
+                    color: semEstoque ? c.perigo : c.sucesso,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    semEstoque ? 'Esgotado' : '${produto.quantidadeEstoque}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: semEstoque ? c.perigo : c.icone,
+                      fontWeight:
+                          semEstoque ? FontWeight.w700 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // Estado
             Expanded(
               flex: 1,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: produto.estaAtivo
-                      ? Colors.green[50]
-                      : Colors.red[50],
+                  color: produto.estaAtivo ? c.sucessoFundo : c.perigoFundo,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color:
-                        produto.estaAtivo ? Colors.green : Colors.red,
+                    color: produto.estaAtivo ? c.sucesso : c.perigo,
                   ),
                 ),
                 child: Text(
@@ -604,9 +649,7 @@ Expanded(
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: produto.estaAtivo
-                        ? Colors.green[700]
-                        : Colors.red[700],
+                    color: produto.estaAtivo ? c.sucesso : c.perigo,
                   ),
                 ),
               ),
@@ -626,28 +669,25 @@ Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: _kAzul.withOpacity(0.08),
+                          color: c.marca.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(Icons.edit_rounded,
-                            size: 16, color: _kAzul),
+                        child:
+                            Icon(Icons.edit_rounded, size: 16, color: c.marca),
                       ),
                     ),
                   ),
                   const SizedBox(width: 6),
                   Tooltip(
-                    message:
-                        produto.estaAtivo ? 'Desativar' : 'Ativar',
+                    message: produto.estaAtivo ? 'Desativar' : 'Ativar',
                     child: InkWell(
                       onTap: onToggle,
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: (produto.estaAtivo
-                                  ? Colors.orange
-                                  : Colors.green)
-                              .withOpacity(0.10),
+                          color: (produto.estaAtivo ? c.aviso : c.sucesso)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Icon(
@@ -655,9 +695,7 @@ Expanded(
                               ? Icons.block_rounded
                               : Icons.check_circle_outline_rounded,
                           size: 16,
-                          color: produto.estaAtivo
-                              ? Colors.orange
-                              : Colors.green[700],
+                          color: produto.estaAtivo ? c.aviso : c.sucesso,
                         ),
                       ),
                     ),
@@ -671,4 +709,3 @@ Expanded(
     );
   }
 }
-

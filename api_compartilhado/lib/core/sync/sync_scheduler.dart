@@ -970,7 +970,7 @@ default:
         final dto = ServicoRequestModel(
           nomeServico: payload['nomeServico'] as String,
           descricao: payload['descricao'] as String?,
-          precoSemIva: (payload['preco'] as num).toDouble(), // base (sem IVA)
+        precoSemIva: (payload['precoUnitario'] as num).toDouble(), // base (sem IVA)
           unidade: payload['unidade'] as String,
         );
         final editado = await service.actualizar(id, dto);
@@ -1203,24 +1203,36 @@ case 'despesa':
         }
 
       case 'produto':
-        if (operacao == 'CREATE' && localId != null && idReal != null) {
+        if (idReal != null && operacao == 'CREATE' && localId != null) {
           await _produtoDao!.deleteByLocalId(localId);
-          try {
-            final real = await _produtoService!.buscarPorId(idReal);
-            await _produtoDao!.upsert(real.toLocalDb());
-          } catch (e) {
-            debugPrint('⚠️ SyncScheduler — pull produto $idReal falhou: $e');
+        }
+        // CREATE e UPDATE: puxa o registo real (preço final e IVA do servidor)
+        if (operacao == 'CREATE' || operacao == 'UPDATE') {
+          final idProduto = operacao == 'CREATE' ? idReal : payload['id'] as int?;
+          if (idProduto != null) {
+            try {
+              final real = await _produtoService!.buscarPorId(idProduto);
+              await _produtoDao!.upsert(real.toLocalDb());
+            } catch (e) {
+              debugPrint('⚠️ SyncScheduler — pull produto $idProduto falhou: $e');
+            }
           }
         }
 
       case 'servico':
-        if (operacao == 'CREATE' && localId != null && idReal != null) {
+        if (idReal != null && operacao == 'CREATE' && localId != null) {
           await _servicoDao!.deleteByLocalId(localId);
-          try {
-            final real = await _servicoService!.buscarPorId(idReal);
-            await _servicoDao!.upsert(real.toLocalDb());
-          } catch (e) {
-            debugPrint('⚠️ SyncScheduler — pull serviço $idReal falhou: $e');
+        }
+        // CREATE e UPDATE: puxa o registo real (preço final e IVA do servidor)
+        if (operacao == 'CREATE' || operacao == 'UPDATE') {
+          final idServico = operacao == 'CREATE' ? idReal : payload['id'] as int?;
+          if (idServico != null) {
+            try {
+              final real = await _servicoService!.buscarPorId(idServico);
+              await _servicoDao!.upsert(real.toLocalDb());
+            } catch (e) {
+              debugPrint('⚠️ SyncScheduler — pull serviço $idServico falhou: $e');
+            }
           }
         }
       case 'cotacao':

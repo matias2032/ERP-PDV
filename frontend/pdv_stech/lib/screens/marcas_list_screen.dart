@@ -5,14 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'marca_form_screen.dart';
 import '../widgets/app_sidebar.dart';
+import '../theme/app_theme.dart';
 import 'package:api_compartilhado/providers/marca_provider.dart';
-
-// ── Paleta STech ─────────────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -39,10 +33,9 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
       context: context,
       builder: (_) => _DialogoConfirmacao(
         titulo: 'Confirmar Exclusão',
-        mensagem:
-            'Deseja realmente excluir a marca "${marca.nomeMarca}"?\n\n'
+        mensagem: 'Deseja realmente excluir a marca "${marca.nomeMarca}"?\n\n'
             'As categorias associadas NÃO serão excluídas.',
-        corBotao: _kVermelho,
+        corBotao: AppColors.vermelhoMarca,
         labelBotao: 'Excluir',
       ),
     );
@@ -73,7 +66,8 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : context.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -85,14 +79,14 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: context.cores.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/gerenciar_marcas'),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navegarParaFormulario(),
-        backgroundColor: _kAzul,
-        foregroundColor: _kBranco,
+        backgroundColor: context.cores.marcaBotao,
+        foregroundColor: AppColors.branco,
         icon: const Icon(Icons.add),
         label: const Text('Nova Marca'),
       ),
@@ -101,18 +95,20 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.label_rounded, color: _kBranco, size: 20),
+            child: const Icon(Icons.label_rounded,
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -136,10 +132,11 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
   }
 
   Widget _buildBody() {
+    final c = context.cores;
     final provider = context.watch<MarcaProvider>();
 
     if (provider.carregando) {
-      return const Center(child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.erro != null) {
@@ -147,19 +144,21 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _kVermelho, size: 48),
+            Icon(Icons.error_outline, color: c.acentoTexto, size: 48),
             const SizedBox(height: 12),
             Text(
               provider.erro!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.acentoTexto),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: provider.carregarMarcas,
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar Novamente'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: c.marcaBotao,
+                  foregroundColor: AppColors.branco),
             ),
           ],
         ),
@@ -171,20 +170,20 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.label_off_outlined, size: 64, color: Colors.grey[400]),
+            Icon(Icons.label_off_outlined, size: 64, color: c.desactivado),
             const SizedBox(height: 16),
             Text('Nenhuma marca cadastrada',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                style: TextStyle(fontSize: 16, color: c.textoSecundario)),
             const SizedBox(height: 8),
             Text('Toque no botão + para adicionar',
-                style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+                style: TextStyle(fontSize: 14, color: c.textoSecundario)),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
-      color: _kAzul,
+      color: c.marca,
       onRefresh: () async => provider.carregarMarcas(),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
@@ -195,30 +194,36 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
   }
 
   Widget _buildMarcaCard(MarcaModel marca) {
+    final c = context.cores;
+    final inicial =
+        marca.nomeMarca.isNotEmpty ? marca.nomeMarca[0].toUpperCase() : '?';
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: ExpansionTile(
+        iconColor: c.marca,
+        collapsedIconColor: c.textoSecundario,
         leading: CircleAvatar(
-          backgroundColor: _kAzul.withOpacity(0.12),
+          backgroundColor: c.marca.withValues(alpha: 0.12),
           child: Text(
-            marca.nomeMarca[0].toUpperCase(),
-            style: const TextStyle(
-                color: _kAzul, fontWeight: FontWeight.w700),
+            inicial,
+            style: TextStyle(color: c.marca, fontWeight: FontWeight.w700),
           ),
         ),
         title: Text(
           marca.nomeMarca,
-          style: const TextStyle(
-              fontWeight: FontWeight.w600, color: _kAzul, fontSize: 14),
+          style: TextStyle(
+              fontWeight: FontWeight.w600, color: c.marca, fontSize: 14),
         ),
         subtitle: Text(
           'ID: ${marca.id}  ·  ${marca.syncStatus}',
-          style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+          style: TextStyle(fontSize: 12, color: c.textoSecundario),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -230,26 +235,26 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: c.avisoFundo,
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.orange.shade300),
+                  border: Border.all(color: c.aviso.withValues(alpha: 0.6)),
                 ),
                 child: Text(
                   'Pendente',
                   style: TextStyle(
                       fontSize: 10,
-                      color: Colors.orange.shade700,
+                      color: c.aviso,
                       fontWeight: FontWeight.w600),
                 ),
               ),
             IconButton(
-              icon: const Icon(Icons.edit_rounded, color: _kAzul, size: 20),
+              icon: Icon(Icons.edit_rounded, color: c.marca, size: 20),
               tooltip: 'Editar',
               onPressed: () => _navegarParaFormulario(marca: marca),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: _kVermelho, size: 20),
+              icon: Icon(Icons.delete_outline_rounded,
+                  color: c.acentoTexto, size: 20),
               tooltip: 'Excluir',
               onPressed: () => _deletarMarca(marca),
             ),
@@ -265,69 +270,71 @@ class _MarcasListScreenState extends State<MarcasListScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.sync_rounded, size: 14, color: _kCinzaTexto),
+                    Icon(Icons.sync_rounded,
+                        size: 14, color: c.textoSecundario),
                     const SizedBox(width: 6),
                     Text(
                       'Estado de sincronização: ${marca.syncStatus}',
                       style:
-                          const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                          TextStyle(fontSize: 12, color: c.textoSecundario),
                     ),
                   ],
                 ),
-             const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-_TituloAssociacoes(
-  icon: Icons.category_outlined,
-  label: 'Categorias associadas',
-  total: marca.categorias.length,
-),
+                _TituloAssociacoes(
+                  icon: Icons.category_outlined,
+                  label: 'Categorias associadas',
+                  total: marca.categorias.length,
+                ),
 
-const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-if (marca.categorias.isEmpty)
-  const Text(
-    'Nenhuma categoria associada.',
-    style: TextStyle(
-      fontSize: 12,
-      color: _kCinzaTexto,
-      fontStyle: FontStyle.italic,
-    ),
-  )
-else
-  Wrap(
-    spacing: 6,
-    runSpacing: 6,
-    children: marca.categorias.map((categoria) {
-      return Chip(
-        avatar: const Icon(
-          Icons.category_rounded,
-          size: 14,
-          color: _kAzul,
-        ),
-        label: Text(
-          categoria.nomeCategoria,
-          style: const TextStyle(fontSize: 12),
-        ),
-        backgroundColor: _kAzul.withOpacity(0.06),
-        side: BorderSide(color: _kAzul.withOpacity(0.18)),
-        visualDensity: VisualDensity.compact,
-      );
-    }).toList(),
-  ),
+                if (marca.categorias.isEmpty)
+                  Text(
+                    'Nenhuma categoria associada.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: c.textoSecundario,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: marca.categorias.map((categoria) {
+                      return Chip(
+                        avatar: Icon(
+                          Icons.category_rounded,
+                          size: 14,
+                          color: c.marca,
+                        ),
+                        label: Text(
+                          categoria.nomeCategoria,
+                          style: TextStyle(
+                              fontSize: 12, color: c.textoPrincipal),
+                        ),
+                        backgroundColor: c.marca.withValues(alpha: 0.06),
+                        side: BorderSide(color: c.marca.withValues(alpha: 0.18)),
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }).toList(),
+                  ),
 
-const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-Row(
-  mainAxisAlignment: MainAxisAlignment.end,
-  children: [
-    TextButton.icon(
-      onPressed: () => _navegarParaFormulario(marca: marca),
-      icon: const Icon(Icons.category_outlined, size: 16),
-      label: const Text('Gerir Categorias'),
-      style: TextButton.styleFrom(foregroundColor: _kAzul),
-    ),
-  ],
-),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _navegarParaFormulario(marca: marca),
+                      icon: const Icon(Icons.category_outlined, size: 16),
+                      label: const Text('Gerir Categorias'),
+                      style: TextButton.styleFrom(foregroundColor: c.marca),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -356,26 +363,26 @@ class _DialogoConfirmacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: Text(titulo,
-          style: const TextStyle(
-              fontWeight: FontWeight.w700, color: _kAzul, fontSize: 17)),
+          style: TextStyle(
+              fontWeight: FontWeight.w700, color: c.marca, fontSize: 17)),
       content: Text(mensagem,
-          style: const TextStyle(fontSize: 14, color: _kCinzaTexto)),
+          style: TextStyle(fontSize: 14, color: c.textoSecundario)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child:
-              const Text('Cancelar', style: TextStyle(color: _kCinzaTexto)),
+          child: Text('Cancelar', style: TextStyle(color: c.textoSecundario)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: ElevatedButton.styleFrom(
             backgroundColor: corBotao,
-            foregroundColor: _kBranco,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
+            foregroundColor: AppColors.branco,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           child: Text(labelBotao),
         ),
@@ -397,15 +404,16 @@ class _TituloAssociacoes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Row(
       children: [
-        Icon(icon, size: 15, color: _kAzul),
+        Icon(icon, size: 15, color: c.marca),
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: _kAzul,
+            color: c.marca,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -413,14 +421,14 @@ class _TituloAssociacoes extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: _kAzul.withOpacity(0.08),
+            color: c.marca.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             '$total',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: _kAzul,
+              color: c.marca,
               fontWeight: FontWeight.w700,
             ),
           ),
