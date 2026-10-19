@@ -5,16 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/services/pdf_service.dart';
+import '../../../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import '../../../screens/devolucao_troca_screen.dart';
 import '../../../screens/nota_debito_screen.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ── Cores ─────────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão/chip/snackbar)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: FAB, botão, ícone da AppBar),
+//                  context.cores.acentoTexto (texto/ícone), context.cores.perigo (erros)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho) / context.cores.superficie (fundos)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   Colors.grey.shade300 → context.cores.borda
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -50,17 +57,17 @@ class _DocumentosListScreenState extends State<DocumentosListScreen> {
   List<DocumentoFiscalModel> _aplicarFiltros(List<DocumentoFiscalModel> todos) {
     var lista = todos;
 
-// 🔥 NOVO FILTRO INTELIGENTE
-lista = lista.where((d) {
-  final isRecibo = d.tipoDocumento.codigo == 'REC';
+    // 🔥 NOVO FILTRO INTELIGENTE
+    lista = lista.where((d) {
+      final isRecibo = d.tipoDocumento.codigo == 'REC';
 
-  // esconder recibos de crédito
-  if (isRecibo && d.tipoVenda == 'CREDITO') {
-    return false;
-  }
+      // esconder recibos de crédito
+      if (isRecibo && d.tipoVenda == 'CREDITO') {
+        return false;
+      }
 
-  return true;
-}).toList();
+      return true;
+    }).toList();
     if (_filtroTipo != null) {
       lista = lista.where((d) => d.tipoDocumento.codigo == _filtroTipo).toList();
     }
@@ -83,220 +90,220 @@ lista = lista.where((d) {
   //   3. Resolve o nome do tipo de pagamento via PedidoService
   //   4. Gera o PDF
 
-Future<void> _gerarPdf(DocumentoFiscalModel doc) async {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: const [
-          SizedBox(
-            width: 16, height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-          ),
-          SizedBox(width: 12),
-          Text('A preparar PDF…'),
-        ],
+  Future<void> _gerarPdf(DocumentoFiscalModel doc) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: const [
+            SizedBox(
+              width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('A preparar PDF…', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        backgroundColor: context.cores.marcaBotao,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 30),
       ),
-      backgroundColor: _kAzul,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      duration: const Duration(seconds: 30),
-    ),
-  );
+    );
 
-try {
-    final codigo = doc.tipoDocumento.codigo;
+    try {
+      final codigo = doc.tipoDocumento.codigo;
 
-    // Notas de Crédito/Débito têm uma estrutura própria (motivo, valor
-    // creditado/debitado, itens devolvidos) — nunca a estrutura de
-    // FAT/VD (tabela de itens do pedido inteiro + IVA + dados bancários).
-    if (codigo == 'NCR' || codigo == 'NDB') {
-      await _gerarPdfNotaRetificativa(doc);
-      return;
-    }
+      // Notas de Crédito/Débito têm uma estrutura própria (motivo, valor
+      // creditado/debitado, itens devolvidos) — nunca a estrutura de
+      // FAT/VD (tabela de itens do pedido inteiro + IVA + dados bancários).
+      if (codigo == 'NCR' || codigo == 'NDB') {
+        await _gerarPdfNotaRetificativa(doc);
+        return;
+      }
 
-// 1. Buscar o pedido pelo id.
-    final pedido =
-        await context.read<PedidoProvider>().buscarPorId(doc.idPedido);
-    if (!mounted) return;
-    if (pedido == null) throw Exception('Pedido não encontrado');
+      // 1. Buscar o pedido pelo id.
+      final pedido =
+          await context.read<PedidoProvider>().buscarPorId(doc.idPedido);
+      if (!mounted) return;
+      if (pedido == null) throw Exception('Pedido não encontrado');
 
-    // 2. Buscar o cliente
-    ClienteModel? cliente;
-    if (pedido.idCliente != null) {
-      try {
-        final clienteProvider = context.read<ClienteListaProvider>();
-        final encontrado = clienteProvider.clientes
-            .cast<ClienteModel?>()
-            .firstWhere(
-              (c) => c?.id == pedido.idCliente,
-              orElse: () => null,
-            );
-        if (encontrado != null) {
-          cliente = encontrado;
-        } else {
-          await clienteProvider.filtrarPorPerfil(1);
-          if (!mounted) return;
-          cliente = context
-              .read<ClienteListaProvider>()
-              .clientes
+      // 2. Buscar o cliente
+      ClienteModel? cliente;
+      if (pedido.idCliente != null) {
+        try {
+          final clienteProvider = context.read<ClienteListaProvider>();
+          final encontrado = clienteProvider.clientes
               .cast<ClienteModel?>()
               .firstWhere(
                 (c) => c?.id == pedido.idCliente,
                 orElse: () => null,
               );
+          if (encontrado != null) {
+            cliente = encontrado;
+          } else {
+            await clienteProvider.filtrarPorPerfil(1);
+            if (!mounted) return;
+            cliente = context
+                .read<ClienteListaProvider>()
+                .clientes
+                .cast<ClienteModel?>()
+                .firstWhere(
+                  (c) => c?.id == pedido.idCliente,
+                  orElse: () => null,
+                );
+          }
+        } catch (_) {}
+      }
+
+      // 3. Resolver tipo de pagamento
+      String nomeTipoPag = 'Dinheiro em espécie';
+      try {
+        await context.read<PedidoProvider>().carregarTiposPagamento();
+        if (!mounted) return;
+        final tipos = context.read<PedidoProvider>().tiposPagamento;
+        final match = tipos.cast<TipoPagamentoResponseDTO?>().firstWhere(
+          (t) => t?.idTipoPagamento == pedido.idTipoPagamento,
+          orElse: () => null,
+        );
+        if (match != null) nomeTipoPag = match.tipoPagamento;
+      } catch (_) {}
+
+      // 4. ClienteModel mínimo se não encontrado
+      cliente ??= ClienteModel(
+        id:         pedido.idCliente ?? 0,
+        nome:       pedido.idCliente != null
+            ? 'Cliente #${pedido.idCliente}'
+            : 'Cliente',
+        apelido:    'Avulso',
+        idPerfil:   1,
+        nomePerfil: 'Sem perfil',
+      );
+
+      // 5. Gerar PDF
+      final pdfService = PdfService();
+      final pdfDoc = DocumentoPdfModel.deApiModelMultiplos(
+        apiModel:      doc,
+        pedidos:       [pedido],
+        cliente:       cliente,
+        tipoPagamento: nomeTipoPag,
+      );
+
+      final arquivo = await pdfService.gerarDocumentoFiscal(
+        pdfDoc,
+        documentoFiscal: doc,
+      );
+      if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+      await pdfService.abrirPdf(arquivo);
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _mostrarSnack('Erro ao gerar PDF: $e', erro: true);
+      }
+    }
+  }
+
+  /// Gera o PDF de uma Nota de Crédito/Débito reabrindo dados persistidos
+  /// no próprio documento (valorTotalEmissao = valor creditado/debitado,
+  /// snapshotConteudo = itens devolvidos, motivoRetificacao = motivo) —
+  /// nunca lendo o pedido ao vivo, que já pode ter mudado desde a emissão.
+  ///
+  /// Busca a factura (FAT/VD) de origem, o pedido e o cliente, tal como a
+  /// DevolucaoTrocaScreen faz, para que o PDF gerado aqui fique idêntico
+  /// ao gerado logo após a devolução.
+  Future<void> _gerarPdfNotaRetificativa(DocumentoFiscalModel doc) async {
+    final itens = <ItemNotaRetificativaModel>[];
+    if (doc.snapshotConteudo != null && doc.snapshotConteudo!.trim().isNotEmpty) {
+      try {
+        final json = jsonDecode(doc.snapshotConteudo!) as Map<String, dynamic>;
+        final lista = json['itensDevolvidos'] as List<dynamic>? ?? [];
+        for (final i in lista) {
+          final m = i as Map<String, dynamic>;
+          itens.add(ItemNotaRetificativaModel(
+            descricao: (m['descricao'] ?? '').toString(),
+            quantidade: (m['quantidade'] as num?)?.toInt() ?? 0,
+            precoUnitario: (m['precoUnitario'] as num?)?.toDouble() ?? 0,
+          ));
         }
+      } catch (_) {
+        // snapshot ausente/corrompido — segue sem itens (ex: ERRO_PREENCHIMENTO)
+      }
+    }
+
+    // 1. Localizar a factura (FAT/VD) de origem entre os documentos do
+    //    mesmo pedido — é o mesmo pedido que gerou tanto a factura como
+    //    esta nota retificativa.
+    final documentosDoPedido = await context
+        .read<DocumentoFiscalProvider>()
+        .buscarDocumentosPorPedido(doc.idPedido);
+
+    final DocumentoFiscalModel? factura = documentosDoPedido
+        .cast<DocumentoFiscalModel?>()
+        .firstWhere(
+          (d) =>
+              d != null &&
+              (d.tipoDocumento.codigo == 'FAT' || d.tipoDocumento.codigo == 'VD'),
+          orElse: () => null,
+        );
+
+    final referenciaDocumentoOrigem =
+        factura?.referencia ?? 'Pedido #${doc.idPedido}';
+
+    // 2. Buscar o pedido — dá acesso à referência do pedido e aos dados
+    //    de cliente singular, tal como na tela de devolução.
+    PedidoModel? pedido;
+    try {
+      pedido = await context.read<PedidoProvider>().buscarPorId(doc.idPedido);
+    } catch (_) {}
+
+    // 3. Buscar o cliente cadastrado, se aplicável.
+    ClienteModel? cliente;
+    if (pedido?.idCliente != null) {
+      try {
+        final clienteProvider = context.read<ClienteListaProvider>();
+        var encontrado = clienteProvider.clientes
+            .cast<ClienteModel?>()
+            .firstWhere((c) => c?.id == pedido!.idCliente, orElse: () => null);
+        if (encontrado == null) {
+          await clienteProvider.filtrarPorPerfil(1);
+          if (!mounted) return;
+          encontrado = context
+              .read<ClienteListaProvider>()
+              .clientes
+              .cast<ClienteModel?>()
+              .firstWhere((c) => c?.id == pedido!.idCliente, orElse: () => null);
+        }
+        cliente = encontrado;
       } catch (_) {}
     }
 
-    // 3. Resolver tipo de pagamento
-    String nomeTipoPag = 'Dinheiro em espécie';
-    try {
-      await context.read<PedidoProvider>().carregarTiposPagamento();
-      if (!mounted) return;
-      final tipos = context.read<PedidoProvider>().tiposPagamento;
-      final match = tipos.cast<TipoPagamentoResponseDTO?>().firstWhere(
-        (t) => t?.idTipoPagamento == pedido.idTipoPagamento,
-        orElse: () => null,
-      );
-      if (match != null) nomeTipoPag = match.tipoPagamento;
-    } catch (_) {}
+    final nomeSingular = [
+      pedido?.nomeClienteSingular,
+      pedido?.apelidoClienteSingular,
+    ].where((v) => v != null && v.trim().isNotEmpty).join(' ').trim();
 
-    // 4. ClienteModel mínimo se não encontrado
-    cliente ??= ClienteModel(
-      id:         pedido.idCliente ?? 0,
-      nome:       pedido.idCliente != null
-          ? 'Cliente #${pedido.idCliente}'
-          : 'Cliente',
-      apelido:    'Avulso',
-      idPerfil:   1,
-      nomePerfil: 'Sem perfil',
+    final pdfDoc = NotaRetificativaPdfModel(
+      tipo: doc.tipoDocumento.codigo == 'NCR'
+          ? TipoDocumentoPdf.notaCredito
+          : TipoDocumentoPdf.notaDebito,
+      referencia: doc.referencia,
+      codigoAT: doc.codigoAt,
+      dataEmissao: doc.emitidoEm,
+      referenciaDocumentoOrigem: referenciaDocumentoOrigem,
+      referenciaPedidoOrigem: pedido?.referencia,
+      motivo: doc.motivoRetificacao ?? 'OUTRO',
+      valor: doc.valorTotalEmissao ?? 0,
+      cliente: cliente,
+      nomeClienteSingular: nomeSingular.isNotEmpty ? pedido?.nomeClienteSingular : null,
+      apelidoClienteSingular:
+          nomeSingular.isNotEmpty ? pedido?.apelidoClienteSingular : null,
+      itensDevolvidos: itens,
     );
 
-    // 5. Gerar PDF
-    final pdfService = PdfService();
-    final pdfDoc = DocumentoPdfModel.deApiModelMultiplos(
-      apiModel:      doc,
-      pedidos:       [pedido],
-      cliente:       cliente,
-      tipoPagamento: nomeTipoPag,
-    );
-
-final arquivo = await pdfService.gerarDocumentoFiscal(
-  pdfDoc,
-  documentoFiscal: doc,
-);
+    final arquivo = await PdfService.instance.gerarNotaRetificativa(pdfDoc);
     if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
-    await pdfService.abrirPdf(arquivo);
-
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      _mostrarSnack('Erro ao gerar PDF: $e', erro: true);
-    }
+    await PdfService.instance.abrirPdf(arquivo);
   }
-}
-
-/// Gera o PDF de uma Nota de Crédito/Débito reabrindo dados persistidos
-/// no próprio documento (valorTotalEmissao = valor creditado/debitado,
-/// snapshotConteudo = itens devolvidos, motivoRetificacao = motivo) —
-/// nunca lendo o pedido ao vivo, que já pode ter mudado desde a emissão.
-///
-/// Busca a factura (FAT/VD) de origem, o pedido e o cliente, tal como a
-/// DevolucaoTrocaScreen faz, para que o PDF gerado aqui fique idêntico
-/// ao gerado logo após a devolução.
-Future<void> _gerarPdfNotaRetificativa(DocumentoFiscalModel doc) async {
-  final itens = <ItemNotaRetificativaModel>[];
-  if (doc.snapshotConteudo != null && doc.snapshotConteudo!.trim().isNotEmpty) {
-    try {
-      final json = jsonDecode(doc.snapshotConteudo!) as Map<String, dynamic>;
-      final lista = json['itensDevolvidos'] as List<dynamic>? ?? [];
-      for (final i in lista) {
-        final m = i as Map<String, dynamic>;
-        itens.add(ItemNotaRetificativaModel(
-          descricao: (m['descricao'] ?? '').toString(),
-          quantidade: (m['quantidade'] as num?)?.toInt() ?? 0,
-          precoUnitario: (m['precoUnitario'] as num?)?.toDouble() ?? 0,
-        ));
-      }
-    } catch (_) {
-      // snapshot ausente/corrompido — segue sem itens (ex: ERRO_PREENCHIMENTO)
-    }
-  }
-
-  // 1. Localizar a factura (FAT/VD) de origem entre os documentos do
-  //    mesmo pedido — é o mesmo pedido que gerou tanto a factura como
-  //    esta nota retificativa.
-  final documentosDoPedido = await context
-      .read<DocumentoFiscalProvider>()
-      .buscarDocumentosPorPedido(doc.idPedido);
-
-  final DocumentoFiscalModel? factura = documentosDoPedido
-      .cast<DocumentoFiscalModel?>()
-      .firstWhere(
-        (d) =>
-            d != null &&
-            (d.tipoDocumento.codigo == 'FAT' || d.tipoDocumento.codigo == 'VD'),
-        orElse: () => null,
-      );
-
-  final referenciaDocumentoOrigem =
-      factura?.referencia ?? 'Pedido #${doc.idPedido}';
-
-  // 2. Buscar o pedido — dá acesso à referência do pedido e aos dados
-  //    de cliente singular, tal como na tela de devolução.
-  PedidoModel? pedido;
-  try {
-    pedido = await context.read<PedidoProvider>().buscarPorId(doc.idPedido);
-  } catch (_) {}
-
-  // 3. Buscar o cliente cadastrado, se aplicável.
-  ClienteModel? cliente;
-  if (pedido?.idCliente != null) {
-    try {
-      final clienteProvider = context.read<ClienteListaProvider>();
-      var encontrado = clienteProvider.clientes
-          .cast<ClienteModel?>()
-          .firstWhere((c) => c?.id == pedido!.idCliente, orElse: () => null);
-      if (encontrado == null) {
-        await clienteProvider.filtrarPorPerfil(1);
-        if (!mounted) return;
-        encontrado = context
-            .read<ClienteListaProvider>()
-            .clientes
-            .cast<ClienteModel?>()
-            .firstWhere((c) => c?.id == pedido!.idCliente, orElse: () => null);
-      }
-      cliente = encontrado;
-    } catch (_) {}
-  }
-
-  final nomeSingular = [
-    pedido?.nomeClienteSingular,
-    pedido?.apelidoClienteSingular,
-  ].where((v) => v != null && v.trim().isNotEmpty).join(' ').trim();
-
-  final pdfDoc = NotaRetificativaPdfModel(
-    tipo: doc.tipoDocumento.codigo == 'NCR'
-        ? TipoDocumentoPdf.notaCredito
-        : TipoDocumentoPdf.notaDebito,
-    referencia: doc.referencia,
-    codigoAT: doc.codigoAt,
-    dataEmissao: doc.emitidoEm,
-    referenciaDocumentoOrigem: referenciaDocumentoOrigem,
-    referenciaPedidoOrigem: pedido?.referencia,
-    motivo: doc.motivoRetificacao ?? 'OUTRO',
-    valor: doc.valorTotalEmissao ?? 0,
-    cliente: cliente,
-    nomeClienteSingular: nomeSingular.isNotEmpty ? pedido?.nomeClienteSingular : null,
-    apelidoClienteSingular:
-        nomeSingular.isNotEmpty ? pedido?.apelidoClienteSingular : null,
-    itensDevolvidos: itens,
-  );
-
-  final arquivo = await PdfService.instance.gerarNotaRetificativa(pdfDoc);
-  if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
-  await PdfService.instance.abrirPdf(arquivo);
-}
 
   // ── Anular documento ──────────────────────────────────────────────────────
 
@@ -323,11 +330,11 @@ Future<void> _gerarPdfNotaRetificativa(DocumentoFiscalModel doc) async {
               id: doc.id,
               motivoAnulacao: motivo,
             );
-if (mounted) {
-  _mostrarSnack('Documento ${doc.referencia} anulado.');
-  await context.read<DocumentoFiscalProvider>().carregarTodos();
-}
-} catch (_) {
+        if (mounted) {
+          _mostrarSnack('Documento ${doc.referencia} anulado.');
+          await context.read<DocumentoFiscalProvider>().carregarTodos();
+        }
+      } catch (_) {
         if (mounted) {
           _mostrarSnack(
             context.read<DocumentoFiscalProvider>().erro ?? 'Erro ao anular.',
@@ -354,27 +361,30 @@ if (mounted) {
     }
   }
 
-//  ── NOTA DE DÉBITO — desativado ──────────────────────────────────────────
-//   Future<void> _abrirNotaDebito(DocumentoFiscalModel doc) async {
-//     final resultado = await Navigator.of(context).push<dynamic>(
-//       MaterialPageRoute(
-//         builder: (_) => NotaDebitoScreen(
-//           idDocumentoOrigem: doc.id,
-//           referenciaDocumento: doc.referencia,
-//         ),
-//       ),
-//     );
+  //  ── NOTA DE DÉBITO — desativado ──────────────────────────────────────────
+  //   Future<void> _abrirNotaDebito(DocumentoFiscalModel doc) async {
+  //     final resultado = await Navigator.of(context).push<dynamic>(
+  //       MaterialPageRoute(
+  //         builder: (_) => NotaDebitoScreen(
+  //           idDocumentoOrigem: doc.id,
+  //           referenciaDocumento: doc.referencia,
+  //         ),
+  //       ),
+  //     );
 
-//     if (resultado != null && mounted) {
-//       await context.read<DocumentoFiscalProvider>().carregarTodos();
-//     }
-//   }
+  //     if (resultado != null && mounted) {
+  //       await context.read<DocumentoFiscalProvider>().carregarTodos();
+  //     }
+  //   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(String mensagem, {bool erro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(mensagem, style: const TextStyle(color: Colors.white)),
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : context.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -395,8 +405,10 @@ if (mounted) {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/gerenciar_documentos'),
       body: Column(
@@ -426,8 +438,8 @@ if (mounted) {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _abrirFormulario,
-        backgroundColor: _kVermelho,
-        foregroundColor: _kBranco,
+        backgroundColor: AppColors.vermelhoMarca,
+        foregroundColor: AppColors.branco,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Novo Documento',
             style: TextStyle(fontWeight: FontWeight.w600)),
@@ -437,19 +449,21 @@ if (mounted) {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.receipt_long_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -495,19 +509,21 @@ class _BarraFiltros extends StatelessWidget {
     required this.onFiltroTipo,
   });
 
-static const _tipos = [
+  static const _tipos = [
     (codigo: 'FAT', label: 'Factura'),
     (codigo: 'REC', label: 'Recibo'),
     (codigo: 'VD', label: 'Venda a Dinheiro'),
-        // (codigo: 'NCO', label: 'Nota de compra'),
-            (codigo: 'NE', label: 'Nota de Entrega'),
+    // (codigo: 'NCO', label: 'Nota de compra'),
+    (codigo: 'NE', label: 'Nota de Entrega'),
     (codigo: 'NCR', label: 'Nota de Crédito'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,18 +538,17 @@ static const _tipos = [
                     hintText:
                         'Pesquisar por referência, utilizador ou código AT...',
                     hintStyle:
-                        const TextStyle(fontSize: 13, color: _kCinzaTexto),
-                    prefixIcon:
-                        const Icon(Icons.search_rounded, color: _kAzul),
+                        TextStyle(fontSize: 13, color: c.textoSecundario),
+                    prefixIcon: Icon(Icons.search_rounded, color: c.marca),
                     suffixIcon: termoPesquisa.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.close_rounded,
-                                color: _kCinzaTexto, size: 18),
+                            icon: Icon(Icons.close_rounded,
+                                color: c.textoSecundario, size: 18),
                             onPressed: onLimparPesquisa,
                           )
                         : null,
                     filled: true,
-                    fillColor: _kCinzaClaro,
+                    fillColor: c.fundo,
                     contentPadding:
                         const EdgeInsets.symmetric(vertical: 10),
                     border: OutlineInputBorder(
@@ -550,7 +565,7 @@ static const _tipos = [
                   return Text(
                     '$total doc(s)',
                     style:
-                        const TextStyle(fontSize: 13, color: _kCinzaTexto),
+                        TextStyle(fontSize: 13, color: c.textoSecundario),
                   );
                 },
               ),
@@ -597,23 +612,24 @@ class _ChipFiltro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: activo ? _kAzul : _kCinzaClaro,
+          color: activo ? c.marcaBotao : c.fundo,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: activo ? _kAzul : Colors.grey.shade300),
+          border: Border.all(color: activo ? c.marcaBotao : c.borda),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
-            color: activo ? _kBranco : _kCinzaTexto,
+            color: activo ? AppColors.branco : c.textoSecundario,
           ),
         ),
       ),
@@ -644,9 +660,10 @@ class _Listagem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<DocumentoFiscalProvider>();
+    final c = context.cores;
 
     if (provider.carregando) {
-      return const Center(child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.erro != null) {
@@ -654,17 +671,20 @@ class _Listagem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _kVermelho, size: 48),
+            Icon(Icons.error_outline, color: c.perigo, size: 48),
             const SizedBox(height: 12),
             Text(provider.erro!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: _kVermelho)),
+                style: TextStyle(color: c.perigo)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => provider.carregarTodos(),
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
+              ),
             ),
           ],
         ),
@@ -674,20 +694,20 @@ class _Listagem extends StatelessWidget {
     final lista = aplicarFiltros(provider.documentos);
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.receipt_long_outlined, color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+            Icon(Icons.receipt_long_outlined, color: c.desactivado, size: 48),
+            const SizedBox(height: 12),
             Text('Nenhum documento encontrado.',
-                style: TextStyle(color: _kCinzaTexto)),
+                style: TextStyle(color: c.textoSecundario)),
           ],
         ),
       );
     }
 
-return LayoutBuilder(builder: (context, constraints) {
+    return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth > 800) {
         return _GradeDocumentos(
           documentos: lista,
@@ -729,32 +749,41 @@ class _CardDocumento extends StatelessWidget {
 
   /// Menu de Nota de Crédito/Débito só aparece para FAT/VD ainda válidos
   /// (não anulados). Documentos NCR/NDB ou já anulados não mostram a opção.
-bool get _podeDevolver =>
+  bool get _podeDevolver =>
       !doc.anulado &&
       (doc.tipoDocumento.codigo == 'FAT' || doc.tipoDocumento.codigo == 'VD');
 
-  Color get _corTipo {
+  /// Cor de cada tipo de documento. No tema claro mantém os tons originais;
+  /// no escuro usa tons claros (os originais, escuros, não teriam contraste
+  /// sobre a superfície escura).
+  Color _corTipo(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
     return switch (doc.tipoDocumento.codigo) {
-      'FAT' => const Color(0xFF0D6E3D),
-      'REC' => const Color(0xFF7B3F00),
-      'VD' => const Color(0xFF4CAF50),
-      _ => _kCinzaTexto,
+      'FAT' => escuro ? c.sucesso : const Color(0xFF0D6E3D),
+      'REC' => escuro ? c.aviso : const Color(0xFF7B3F00),
+      'VD' => escuro ? const Color(0xFFA5D6A7) : const Color(0xFF4CAF50),
+      _ => c.textoSecundario,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final anulado = doc.anulado;
+    final corTipo = _corTipo(context);
+    final alphaFundo = context.escuro ? 0.16 : 0.1;
 
     return Card(
       elevation: 0,
+      color: c.superficie,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: anulado
-              ? _kVermelho.withOpacity(0.35)
-              : Colors.grey.shade300,
+              ? c.acentoTexto.withValues(alpha: 0.35)
+              : c.borda,
           width: 1,
         ),
       ),
@@ -770,9 +799,9 @@ bool get _podeDevolver =>
                 width: 52,
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
-                  color: _corTipo.withOpacity(0.1),
+                  color: corTipo.withValues(alpha: alphaFundo),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _corTipo.withOpacity(0.3)),
+                  border: Border.all(color: corTipo.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -781,14 +810,14 @@ bool get _podeDevolver =>
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: _corTipo,
+                        color: corTipo,
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 2),
                     Icon(_iconeTipo(doc.tipoDocumento.codigo),
-                        color: _corTipo, size: 18),
+                        color: corTipo, size: 18),
                   ],
                 ),
               ),
@@ -807,7 +836,7 @@ bool get _podeDevolver =>
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: anulado ? _kCinzaTexto : _kAzul,
+                              color: anulado ? c.textoSecundario : c.marca,
                               decoration: anulado
                                   ? TextDecoration.lineThrough
                                   : null,
@@ -819,7 +848,7 @@ bool get _podeDevolver =>
                         else
                           _BadgeTipo(
                               label: doc.tipoDocumento.nome,
-                              cor: _corTipo),
+                              cor: corTipo),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -842,14 +871,14 @@ bool get _podeDevolver =>
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.block_rounded,
-                              size: 12, color: _kVermelho),
+                          Icon(Icons.block_rounded,
+                              size: 12, color: c.acentoTexto),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               'Motivo: ${doc.motivoAnulacao}',
-                              style: const TextStyle(
-                                  fontSize: 11, color: _kVermelho),
+                              style: TextStyle(
+                                  fontSize: 11, color: c.acentoTexto),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -861,29 +890,29 @@ bool get _podeDevolver =>
                 ),
               ),
 
-// ── Acções ─────────────────────────────────────────────────
+              // ── Acções ─────────────────────────────────────────────────
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                 Tooltip(
-  message: anulado ? 'Gerar PDF anulado' : 'Gerar PDF',
-  child: IconButton(
-    icon: const Icon(Icons.picture_as_pdf_rounded),
-    color: _kAzul,
-    iconSize: 20,
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-    visualDensity: VisualDensity.compact,
-    onPressed: () => onGerarPdf(doc),
-  ),
-),
+                  Tooltip(
+                    message: anulado ? 'Gerar PDF anulado' : 'Gerar PDF',
+                    child: IconButton(
+                      icon: const Icon(Icons.picture_as_pdf_rounded),
+                      color: c.marca,
+                      iconSize: 20,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => onGerarPdf(doc),
+                    ),
+                  ),
                   if (!anulado)
                     Tooltip(
                       message: 'Anular documento',
                       child: IconButton(
                         icon: const Icon(Icons.block_rounded),
-                        color: _kVermelho,
+                        color: c.acentoTexto,
                         iconSize: 20,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
@@ -895,8 +924,8 @@ bool get _podeDevolver =>
                     PopupMenuButton<String>(
                       tooltip: 'Devolução / Nota de Crédito',
                       padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.more_vert_rounded,
-                          color: _kCinzaTexto, size: 20),
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: c.textoSecundario, size: 20),
                       onSelected: (opcao) {
                         if (opcao == 'devolver') {
                           onDevolver(doc);
@@ -948,19 +977,20 @@ bool get _podeDevolver =>
 class _BadgeAnulado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _kVermelho.withOpacity(0.1),
+        color: c.acentoTexto.withValues(alpha: context.escuro ? 0.16 : 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: _kVermelho.withOpacity(0.4)),
+        border: Border.all(color: c.acentoTexto.withValues(alpha: 0.4)),
       ),
-      child: const Text(
+      child: Text(
         'ANULADO',
         style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: _kVermelho,
+            color: c.acentoTexto,
             letterSpacing: 0.5),
       ),
     );
@@ -977,7 +1007,7 @@ class _BadgeTipo extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.08),
+        color: cor.withValues(alpha: context.escuro ? 0.16 : 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -996,12 +1026,13 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: _kCinzaTexto),
+        Icon(icon, size: 13, color: c.textoSecundario),
         const SizedBox(width: 3),
-        Text(label, style: const TextStyle(fontSize: 12, color: _kCinzaTexto)),
+        Text(label, style: TextStyle(fontSize: 12, color: c.textoSecundario)),
       ],
     );
   }
@@ -1096,15 +1127,17 @@ class _DialogoAnulacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.block_rounded, color: _kVermelho, size: 22),
-          SizedBox(width: 8),
+          Icon(Icons.block_rounded, color: c.acentoTexto, size: 22),
+          const SizedBox(width: 8),
           Text('Anular Documento',
               style: TextStyle(
-                  fontWeight: FontWeight.w700, color: _kAzul, fontSize: 17)),
+                  fontWeight: FontWeight.w700, color: c.marca, fontSize: 17)),
         ],
       ),
       content: Column(
@@ -1113,13 +1146,13 @@ class _DialogoAnulacao extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: 13, color: _kCinzaTexto),
+              style: TextStyle(fontSize: 13, color: c.textoSecundario),
               children: [
                 const TextSpan(text: 'Anular o documento '),
                 TextSpan(
                   text: referencia,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, color: _kAzul),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, color: c.marca),
                 ),
                 const TextSpan(
                     text: '? Esta acção não pode ser revertida.\n\n'),
@@ -1136,7 +1169,7 @@ class _DialogoAnulacao extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: _kAzul, width: 1.5),
+                borderSide: BorderSide(color: c.marca, width: 1.5),
               ),
             ),
           ),
@@ -1145,16 +1178,15 @@ class _DialogoAnulacao extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child:
-              const Text('Cancelar', style: TextStyle(color: _kCinzaTexto)),
+          child: Text('Cancelar', style: TextStyle(color: c.textoSecundario)),
         ),
         ElevatedButton.icon(
           onPressed: () => Navigator.of(context).pop(true),
           icon: const Icon(Icons.block_rounded, size: 16),
           label: const Text('Anular'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _kVermelho,
-            foregroundColor: _kBranco,
+            backgroundColor: AppColors.vermelhoMarca,
+            foregroundColor: AppColors.branco,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8)),
           ),

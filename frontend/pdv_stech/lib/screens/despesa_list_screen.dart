@@ -1,13 +1,23 @@
+// lib/screens/despesa_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 import '/widgets/app_sidebar.dart';
+import '../theme/app_theme.dart';
 
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de snackbar info)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho de tabela)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: botão excluir, ícone da AppBar,
+//                  snackbar de erro; texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//                  context.cores.perigo (mensagem de erro de carregamento)
+//   _kBranco     → AppColors.branco / context.cores.superficie (barra de filtros)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
 
 enum PeriodoDespesa {
   hoje,
@@ -62,49 +72,56 @@ class _DespesaListScreenState extends State<DespesaListScreen> {
   @override
   void initState() {
     super.initState();
-WidgetsBinding.instance.addPostFrameCallback((_) async {
-  final provider = context.read<DespesaProvider>();
-  await provider.carregarTiposDespesa();
-  await _carregarPorPeriodo();
-});
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<DespesaProvider>();
+      await provider.carregarTiposDespesa();
+      await _carregarPorPeriodo();
+    });
   }
 
-Future<void> _carregarPorPeriodo() async {
-  if (!mounted) return;
+  Future<void> _carregarPorPeriodo() async {
+    if (!mounted) return;
 
-  final agora = DateTime.now();
-  final provider = context.read<DespesaProvider>();
+    final agora = DateTime.now();
+    final provider = context.read<DespesaProvider>();
 
-  provider.definirFiltroTipoDespesa(_idTipoDespesaFiltro);
+    provider.definirFiltroTipoDespesa(_idTipoDespesaFiltro);
 
-  await provider.carregarPorPeriodoComFiltro(
-    inicio: _periodo.inicio,
-    fim: agora,
-  );
-}
-
-Future<void> _abrirFormulario({DespesaModel? despesa}) async {
-  final resultado = await Navigator.of(context).pushNamed(
-    '/cadastrar_despesas',
-    arguments: despesa,
-  );
-
-  if (!mounted) return;
-
-  if (resultado is DespesaModel) {
-    context.read<DespesaProvider>().inserirOuAtualizarNaLista(resultado);
-    return;
+    await provider.carregarPorPeriodoComFiltro(
+      inicio: _periodo.inicio,
+      fim: agora,
+    );
   }
 
-  if (resultado == true) {
-    await _carregarPorPeriodo();
+  Future<void> _abrirFormulario({DespesaModel? despesa}) async {
+    final resultado = await Navigator.of(context).pushNamed(
+      '/cadastrar_despesas',
+      arguments: despesa,
+    );
+
+    if (!mounted) return;
+
+    if (resultado is DespesaModel) {
+      context.read<DespesaProvider>().inserirOuAtualizarNaLista(resultado);
+      return;
+    }
+
+    if (resultado == true) {
+      await _carregarPorPeriodo();
+    }
   }
-}
+
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(BuildContext ctx, String mensagem, {bool erro = false}) {
+    final c = ctx.cores;
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(
+          mensagem,
+          style: const TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor: erro ? AppColors.vermelhoMarca : c.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -112,76 +129,78 @@ Future<void> _abrirFormulario({DespesaModel? despesa}) async {
   }
 
   Future<void> _confirmarExclusao(BuildContext ctx, DespesaModel despesa) async {
-  final id = despesa.idDespesa;
+    final id = despesa.idDespesa;
 
-  if (id == null) {
-    _mostrarSnack(ctx, 'Despesa sem ID válido.', erro: true);
-    return;
-  }
+    if (id == null) {
+      _mostrarSnack(ctx, 'Despesa sem ID válido.', erro: true);
+      return;
+    }
 
-  final motivo = await showDialog<String>(
-    context: ctx,
-    barrierDismissible: false,
-    builder: (_) => _DialogoMotivoExclusao(despesa: despesa),
-  );
-
-  if (motivo == null) return;
-
-  if (motivo.trim().isEmpty) {
-    _mostrarSnack(ctx, 'Informe o motivo da exclusão.', erro: true);
-    return;
-  }
-
-  if (!ctx.mounted) return;
-
-  final provider = ctx.read<DespesaProvider>();
-
-  final sucesso = await provider.excluirDespesa(
-    id,
-    motivoExclusao: motivo.trim(),
-  );
-
-  if (!ctx.mounted) return;
-
-  if (sucesso) {
-    _mostrarSnack(ctx, 'Despesa excluída com sucesso.');
-  } else {
-    _mostrarSnack(
-      ctx,
-      provider.erro ?? 'Erro ao excluir despesa.',
-      erro: true,
+    final motivo = await showDialog<String>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => _DialogoMotivoExclusao(despesa: despesa),
     );
-    provider.limparErro();
+
+    if (motivo == null) return;
+
+    if (motivo.trim().isEmpty) {
+      _mostrarSnack(ctx, 'Informe o motivo da exclusão.', erro: true);
+      return;
+    }
+
+    if (!ctx.mounted) return;
+
+    final provider = ctx.read<DespesaProvider>();
+
+    final sucesso = await provider.excluirDespesa(
+      id,
+      motivoExclusao: motivo.trim(),
+    );
+
+    if (!ctx.mounted) return;
+
+    if (sucesso) {
+      _mostrarSnack(ctx, 'Despesa excluída com sucesso.');
+    } else {
+      _mostrarSnack(
+        ctx,
+        provider.erro ?? 'Erro ao excluir despesa.',
+        erro: true,
+      );
+      provider.limparErro();
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/gerenciar_despesas'),
       body: Column(
         children: [
-        _FiltroPeriodo(
-  periodo: _periodo,
-  idTipoDespesaFiltro: _idTipoDespesaFiltro,
-onPeriodoChanged: (novo) async {
-  setState(() => _periodo = novo);
-  await _carregarPorPeriodo();
-},
-onTipoChanged: (novoTipo) async {
-  setState(() => _idTipoDespesaFiltro = novoTipo);
-  await _carregarPorPeriodo();
-},
-),
+          _FiltroPeriodo(
+            periodo: _periodo,
+            idTipoDespesaFiltro: _idTipoDespesaFiltro,
+            onPeriodoChanged: (novo) async {
+              setState(() => _periodo = novo);
+              await _carregarPorPeriodo();
+            },
+            onTipoChanged: (novoTipo) async {
+              setState(() => _idTipoDespesaFiltro = novoTipo);
+              await _carregarPorPeriodo();
+            },
+          ),
           const Divider(height: 1),
-    Expanded(
-  child: _ListagemDespesas(
-    onEditar: (d) => _abrirFormulario(despesa: d),
-    onExcluir: (d) => _confirmarExclusao(context, d),
-  ),
-),
+          Expanded(
+            child: _ListagemDespesas(
+              onEditar: (d) => _abrirFormulario(despesa: d),
+              onExcluir: (d) => _confirmarExclusao(context, d),
+            ),
+          ),
         ],
       ),
     );
@@ -189,20 +208,22 @@ onTipoChanged: (novoTipo) async {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.payments_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -214,20 +235,20 @@ onTipoChanged: (novoTipo) async {
         ],
       ),
       actions: [
-  IconButton(
-    icon: const Icon(Icons.add_card_rounded),
-    tooltip: 'Nova Despesa',
-    onPressed: () => _abrirFormulario(),
-  ),
-  IconButton(
-    icon: const Icon(Icons.refresh_rounded),
-    tooltip: 'Recarregar',
-    onPressed: () async {
-      await _carregarPorPeriodo();
-    },
-  ),
-  const SizedBox(width: 8),
-],
+        IconButton(
+          icon: const Icon(Icons.add_card_rounded),
+          tooltip: 'Nova Despesa',
+          onPressed: () => _abrirFormulario(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: 'Recarregar',
+          onPressed: () async {
+            await _carregarPorPeriodo();
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 }
@@ -244,21 +265,23 @@ class _FiltroPeriodo extends StatelessWidget {
     required this.onPeriodoChanged,
     required this.onTipoChanged,
   });
+
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<DespesaProvider>();
 
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.date_range_rounded, color: _kAzul, size: 20),
+          Icon(Icons.date_range_rounded, color: c.marca, size: 20),
           const SizedBox(width: 10),
-          const Text(
+          Text(
             'Período:',
             style: TextStyle(
-              color: _kCinzaTexto,
+              color: c.textoSecundario,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -267,6 +290,8 @@ class _FiltroPeriodo extends StatelessWidget {
           DropdownButton<PeriodoDespesa>(
             value: periodo,
             underline: const SizedBox.shrink(),
+            dropdownColor: c.superficieAlt,
+            iconEnabledColor: c.icone,
             items: PeriodoDespesa.values
                 .map(
                   (p) => DropdownMenuItem(
@@ -275,51 +300,52 @@ class _FiltroPeriodo extends StatelessWidget {
                   ),
                 )
                 .toList(),
-         onChanged: (v) {
-  if (v != null) onPeriodoChanged(v);
-},
+            onChanged: (v) {
+              if (v != null) onPeriodoChanged(v);
+            },
           ),
-
           const SizedBox(width: 18),
-const Icon(Icons.account_tree_rounded, color: _kAzul, size: 20),
-const SizedBox(width: 8),
-const Text(
-  'Tipo:',
-  style: TextStyle(
-    color: _kCinzaTexto,
-    fontWeight: FontWeight.w600,
-    fontSize: 13,
-  ),
-),
-const SizedBox(width: 10),
-DropdownButton<int?>(
-  value: idTipoDespesaFiltro,
-  underline: const SizedBox.shrink(),
-  items: [
-    const DropdownMenuItem<int?>(
-      value: null,
-      child: Text('Todos'),
-    ),
-    ...provider.tiposDespesa.map(
-      (tipo) => DropdownMenuItem<int?>(
-        value: tipo.idTipoDespesa,
-        child: Text(tipo.nomeDespesa),
-      ),
-    ),
-  ],
-  onChanged: onTipoChanged,
-),
+          Icon(Icons.account_tree_rounded, color: c.marca, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            'Tipo:',
+            style: TextStyle(
+              color: c.textoSecundario,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 10),
+          DropdownButton<int?>(
+            value: idTipoDespesaFiltro,
+            underline: const SizedBox.shrink(),
+            dropdownColor: c.superficieAlt,
+            iconEnabledColor: c.icone,
+            items: [
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('Todos'),
+              ),
+              ...provider.tiposDespesa.map(
+                (tipo) => DropdownMenuItem<int?>(
+                  value: tipo.idTipoDespesa,
+                  child: Text(tipo.nomeDespesa),
+                ),
+              ),
+            ],
+            onChanged: onTipoChanged,
+          ),
           const Spacer(),
           Text(
             '${provider.despesas.length} despesa(s)',
-            style: const TextStyle(fontSize: 13, color: _kCinzaTexto),
+            style: TextStyle(fontSize: 13, color: c.textoSecundario),
           ),
           const SizedBox(width: 16),
           Text(
             'Total: ${provider.totalDespesas.toStringAsFixed(2)} MZN',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: _kAzul,
+              color: c.marca,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -340,10 +366,11 @@ class _ListagemDespesas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<DespesaProvider>();
 
     if (provider.carregando) {
-      return const Center(child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.temErro) {
@@ -351,7 +378,7 @@ class _ListagemDespesas extends StatelessWidget {
         child: Text(
           provider.erro!,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _kVermelho),
+          style: TextStyle(color: c.perigo),
         ),
       );
     }
@@ -359,15 +386,16 @@ class _ListagemDespesas extends StatelessWidget {
     final lista = provider.despesas;
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.receipt_long_outlined, color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+            Icon(Icons.receipt_long_outlined,
+                color: c.textoSecundario, size: 48),
+            const SizedBox(height: 12),
             Text(
               'Nenhuma despesa encontrada neste período.',
-              style: TextStyle(color: _kCinzaTexto),
+              style: TextStyle(color: c.textoSecundario),
             ),
           ],
         ),
@@ -376,11 +404,12 @@ class _ListagemDespesas extends StatelessWidget {
 
     return Column(
       children: [
+        // Cabeçalho de tabela: azulMarca FIXO + texto branco (igual nos dois temas).
         Container(
           margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: const BoxDecoration(
-            color: _kAzul,
+            color: AppColors.azulMarca,
             borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: const Row(
@@ -424,7 +453,7 @@ class _HeaderText extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: Colors.white,
+        color: AppColors.branco,
         fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
@@ -447,6 +476,7 @@ class _LinhaDespesa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final data = despesa.dataDespesa;
     final dataTexto = data == null
         ? '—'
@@ -454,8 +484,8 @@ class _LinhaDespesa extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE8EAF0))),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(bottom: BorderSide(color: c.borda)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -463,10 +493,11 @@ class _LinhaDespesa extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: _kAzul.withOpacity(0.12),
-              child: const Icon(
+              backgroundColor:
+                  c.marca.withValues(alpha: context.escuro ? 0.18 : 0.12),
+              child: Icon(
                 Icons.payments_outlined,
-                color: _kAzul,
+                color: c.marca,
                 size: 18,
               ),
             ),
@@ -477,10 +508,10 @@ class _LinhaDespesa extends StatelessWidget {
                 despesa.descricao,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
             ),
@@ -492,9 +523,9 @@ class _LinhaDespesa extends StatelessWidget {
                     : 'Sem tipo',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: _kCinzaTexto,
+                  color: c.textoSecundario,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -507,7 +538,7 @@ class _LinhaDespesa extends StatelessWidget {
                     : 'Sem fornecedor',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
             Expanded(
@@ -516,16 +547,16 @@ class _LinhaDespesa extends StatelessWidget {
                 despesa.nuitFornecedor?.isNotEmpty == true
                     ? despesa.nuitFornecedor!
                     : '—',
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
             Expanded(
               flex: 2,
               child: Text(
                 '${despesa.valorGasto.toStringAsFixed(2)} MZN',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: _kAzul,
+                  color: c.marca,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -534,7 +565,7 @@ class _LinhaDespesa extends StatelessWidget {
               flex: 2,
               child: Text(
                 dataTexto,
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
             SizedBox(
@@ -545,20 +576,20 @@ class _LinhaDespesa extends StatelessWidget {
                   InkWell(
                     borderRadius: BorderRadius.circular(20),
                     onTap: () => onEditar(despesa),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.edit_rounded, color: _kAzul, size: 20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.edit_rounded, color: c.marca, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(20),
                     onTap: () => onExcluir(despesa),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Icon(
                         Icons.delete_outline_rounded,
-                        color: _kVermelho,
+                        color: c.acentoTexto,
                         size: 20,
                       ),
                     ),
@@ -612,13 +643,16 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final outline = Theme.of(context).colorScheme.outline;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.delete_outline_rounded, color: _kVermelho),
-          SizedBox(width: 10),
-          Text('Excluir despesa'),
+          Icon(Icons.delete_outline_rounded, color: c.acentoTexto),
+          const SizedBox(width: 10),
+          const Text('Excluir despesa'),
         ],
       ),
       content: SizedBox(
@@ -632,8 +666,8 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
                 widget.despesa.descricao,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _kAzul,
+                style: TextStyle(
+                  color: c.marca,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -643,8 +677,8 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
               alignment: Alignment.centerLeft,
               child: Text(
                 '${widget.despesa.valorGasto.toStringAsFixed(2)} MZN',
-                style: const TextStyle(
-                  color: _kCinzaTexto,
+                style: TextStyle(
+                  color: c.textoSecundario,
                   fontSize: 13,
                 ),
               ),
@@ -661,6 +695,11 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
                 errorText: _erro,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: c.marca, width: 2),
                 ),
               ),
               onChanged: (_) {
@@ -668,10 +707,10 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
               },
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'A despesa será removida da lista principal, mas continuará disponível em Despesas Excluídas.',
               style: TextStyle(
-                color: _kCinzaTexto,
+                color: c.textoSecundario,
                 fontSize: 12,
               ),
             ),
@@ -688,8 +727,8 @@ class _DialogoMotivoExclusaoState extends State<_DialogoMotivoExclusao> {
           icon: const Icon(Icons.delete_outline_rounded),
           label: const Text('Excluir'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _kVermelho,
-            foregroundColor: _kBranco,
+            backgroundColor: AppColors.vermelhoMarca,
+            foregroundColor: AppColors.branco,
           ),
         ),
       ],

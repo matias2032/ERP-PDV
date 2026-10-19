@@ -7,12 +7,19 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import '../theme/app_theme.dart';
 
-// ─── Paleta (igual às telas de pedidos) ───────────────────────────────────────
-const _kPrimary = Color(0xFF1B2A6B);
-const _kAccent = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
-const _kSuccess = Color(0xFF2E7D32);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kPrimary, _kAccent, _kBackground, _kSuccess) foram
+// substituídas pelo tema:
+//   _kPrimary    → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kAccent     → AppColors.vermelhoMarca (fundo: botões, snackbars; texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//                  context.cores.perigo (mensagem de erro de carregamento)
+//   _kBackground → context.cores.fundo
+//   _kSuccess    → context.cores.sucesso
 
 /// Estado local de seleção de um item (produto ou serviço) para devolução.
 class _SelecaoItem {
@@ -128,10 +135,10 @@ class _DevolucaoTrocaScreenState extends State<DevolucaoTrocaScreen> {
     if (idCliente == null) return;
 
     try {
-final cliente = await ClienteService(
-  baseUrl: ApiConfig.baseUrl,
-  httpClient: http.Client(), // <--- Passando uma nova instância de Client
-).buscarPorId(idCliente);
+      final cliente = await ClienteService(
+        baseUrl: ApiConfig.baseUrl,
+        httpClient: http.Client(), // <--- Passando uma nova instância de Client
+      ).buscarPorId(idCliente);
       if (!mounted) return;
       setState(() => _clienteCadastrado = cliente);
     } catch (e) {
@@ -249,12 +256,11 @@ final cliente = await ClienteService(
     } else {
       final erro = context.read<PedidoProvider>().errorMessage ??
           'Erro ao processar devolução/anulação.';
-      _snack(erro, _kAccent);
+      _snack(erro, AppColors.vermelhoMarca);
     }
   }
 
-
-Future<void> _gerarPdfNotaCredito(DevolucaoResponseModel r) async {
+  Future<void> _gerarPdfNotaCredito(DevolucaoResponseModel r) async {
     try {
       // DevolucaoResponseModel não traz codigoAt/emitidoEm — busca o
       // documento fiscal completo para poder montar o PDF correctamente.
@@ -263,7 +269,8 @@ Future<void> _gerarPdfNotaCredito(DevolucaoResponseModel r) async {
           .buscarPorId(r.idNotaCredito);
 
       if (documentoNota == null) {
-        _snack('Não foi possível carregar os dados da nota emitida.', _kAccent);
+        _snack('Não foi possível carregar os dados da nota emitida.',
+            AppColors.vermelhoMarca);
         return;
       }
 
@@ -298,7 +305,7 @@ Future<void> _gerarPdfNotaCredito(DevolucaoResponseModel r) async {
         pedido?.apelidoClienteSingular,
       ].where((v) => v != null && v.trim().isNotEmpty).join(' ').trim();
 
-final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
+      final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
         devolucao: r,
         documentoNota: documentoNota,
         referenciaDocumentoOrigem:
@@ -314,50 +321,53 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
       final file = await PdfService.instance.gerarNotaRetificativa(pdfDoc);
       await PdfService.instance.abrirPdf(file);
     } catch (e) {
-      _snack('Erro ao gerar PDF: $e', _kAccent);
+      _snack('Erro ao gerar PDF: $e', AppColors.vermelhoMarca);
     }
   }
 
-  
   Future<bool> _confirmarAnulacaoTotal() async {
     return await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: _kAccent),
-                SizedBox(width: 8),
-                Text(
-                  'Anular factura',
-                  style: TextStyle(color: _kPrimary, fontWeight: FontWeight.bold),
+          builder: (ctx) {
+            final c = ctx.cores;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: c.acentoTexto),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Anular factura',
+                    style: TextStyle(
+                        color: c.marca, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Esta operação vai anular totalmente a factura de origem e '
+                'creditar o valor total do pedido (${_currencyFmt.format(_pedido?.total ?? 0)}). '
+                'Esta acção não pode ser revertida. Deseja continuar?',
+                style: const TextStyle(fontSize: 13),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Voltar'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.vermelhoMarca,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Anular e Creditar'),
                 ),
               ],
-            ),
-            content: Text(
-              'Esta operação vai anular totalmente a factura de origem e '
-              'creditar o valor total do pedido (${_currencyFmt.format(_pedido?.total ?? 0)}). '
-              'Esta acção não pode ser revertida. Deseja continuar?',
-              style: const TextStyle(fontSize: 13),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Voltar'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Anular e Creditar'),
-              ),
-            ],
-          ),
+            );
+          },
         ) ??
         false;
   }
@@ -376,11 +386,13 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
     Navigator.pop(context, _resultado);
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _snack(String msg, Color cor) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
         backgroundColor: cor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -394,10 +406,14 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: c.fundo,
       appBar: AppBar(
-        backgroundColor: _kPrimary,
+        // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+        backgroundColor:
+            context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -410,8 +426,10 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   }
 
   Widget _buildBody() {
+    final c = context.cores;
+
     if (_carregando) {
-      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (_erroCarregamento != null) {
@@ -421,17 +439,20 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _kAccent, size: 52),
+              Icon(Icons.error_outline, color: c.perigo, size: 52),
               const SizedBox(height: 12),
               Text(_erroCarregamento!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _kAccent)),
+                  style: TextStyle(color: c.perigo)),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _carregar,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Tentar novamente'),
-                style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.marcaBotao,
+                  foregroundColor: AppColors.branco,
+                ),
               ),
             ],
           ),
@@ -470,6 +491,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Cabeçalho ─────────────────────────────────────────────────────────
 
   Widget _buildCabecalho(PedidoModel pedido) {
+    final c = context.cores;
     final nomeSingular = [
       pedido.nomeClienteSingular,
       pedido.apelidoClienteSingular,
@@ -483,7 +505,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -495,11 +517,11 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _kPrimary.withOpacity(0.08),
+                    color: c.marca.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.receipt_long_rounded,
-                      color: _kPrimary, size: 22),
+                  child: Icon(Icons.receipt_long_rounded,
+                      color: c.marca, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -508,27 +530,27 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
                     children: [
                       Text(
                         pedido.referencia,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: _kPrimary,
+                          color: c.marca,
                         ),
                       ),
                       if (widget.documentoOrigem != null)
                         Text(
                           'Factura: ${widget.documentoOrigem!.referencia}',
-                          style:
-                              TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style: TextStyle(
+                              color: c.textoSecundario, fontSize: 12),
                         ),
                     ],
                   ),
                 ),
                 Text(
                   _currencyFmt.format(pedido.total),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: _kPrimary,
+                    color: c.marca,
                   ),
                 ),
               ],
@@ -539,11 +561,11 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             Row(
               children: [
                 Icon(Icons.person_outline_rounded,
-                    size: 15, color: Colors.grey[600]),
+                    size: 15, color: c.textoSecundario),
                 const SizedBox(width: 6),
                 Text(
                   clienteLabel,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  style: TextStyle(fontSize: 13, color: c.textoSecundario),
                 ),
               ],
             ),
@@ -556,9 +578,11 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Seletor de motivo ─────────────────────────────────────────────────
 
   Widget _buildSeletorMotivo() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -572,14 +596,14 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: _kPrimary,
+                  color: c.marca,
                 ),
               ),
             ),
             RadioListTile<String>(
               value: 'ERRO_PREENCHIMENTO',
               groupValue: _motivo,
-              activeColor: _kPrimary,
+              activeColor: c.marca,
               title: const Text('Erro de preenchimento',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               subtitle: const Text(
@@ -591,7 +615,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             RadioListTile<String>(
               value: 'DEVOLUCAO',
               groupValue: _motivo,
-              activeColor: _kPrimary,
+              activeColor: c.marca,
               title: const Text('Devolução',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               subtitle: const Text(
@@ -603,7 +627,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             RadioListTile<String>(
               value: 'TROCA_PRODUTO',
               groupValue: _motivo,
-              activeColor: _kPrimary,
+              activeColor: c.marca,
               title: const Text('Troca de produto',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               subtitle: const Text(
@@ -621,24 +645,26 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Resumo de anulação total ──────────────────────────────────────────
 
   Widget _buildResumoAnulacaoTotal(PedidoModel pedido) {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _kAccent.withOpacity(0.06),
+        color: c.acentoTexto.withValues(alpha: context.escuro ? 0.12 : 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kAccent.withOpacity(0.3)),
+        border: Border.all(color: c.acentoTexto.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: _kAccent, size: 20),
+          Icon(Icons.warning_amber_rounded, color: c.acentoTexto, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'A factura ${widget.documentoOrigem?.referencia ?? '#${widget.idDocumentoOrigem}'} '
               'será anulada totalmente e o valor de ${_currencyFmt.format(pedido.total)} '
               'será creditado. O stock não será alterado.',
-              style: const TextStyle(fontSize: 13, color: _kAccent, height: 1.4),
+              style: TextStyle(fontSize: 13, color: c.acentoTexto, height: 1.4),
             ),
           ),
         ],
@@ -649,9 +675,11 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Lista de itens (devolução / troca) ───────────────────────────────
 
   Widget _buildListaItens(PedidoModel pedido) {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -661,15 +689,15 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             Text(
               'Selecione os itens a devolver',
               style: TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 13, color: _kPrimary),
+                  fontWeight: FontWeight.w700, fontSize: 13, color: c.marca),
             ),
             const SizedBox(height: 8),
             if (pedido.itensProduto.isEmpty && pedido.itensServico.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   'Este pedido não tem itens.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(color: c.textoSecundario, fontSize: 13),
                 ),
               ),
             ...pedido.itensProduto.map(
@@ -717,9 +745,11 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Observações ───────────────────────────────────────────────────────
 
   Widget _buildObservacoes() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -729,7 +759,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             Text(
               'Observações (opcional)',
               style: TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 13, color: _kPrimary),
+                  fontWeight: FontWeight.w700, fontSize: 13, color: c.marca),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -737,8 +767,9 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Detalhes adicionais sobre a devolução...',
+                hintStyle: TextStyle(color: c.textoSecundario),
                 filled: true,
-                fillColor: _kBackground,
+                fillColor: c.fundo,
                 contentPadding: const EdgeInsets.all(10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -755,21 +786,23 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Resumo do valor a creditar ────────────────────────────────────────
 
   Widget _buildResumoValor() {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _kPrimary.withOpacity(0.06),
+        color: c.marca.withValues(alpha: context.escuro ? 0.12 : 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Valor a creditar',
-              style: TextStyle(fontSize: 13, color: _kPrimary)),
+          Text('Valor a creditar',
+              style: TextStyle(fontSize: 13, color: c.marca)),
           Text(
             _currencyFmt.format(_valorACreditar),
-            style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: _kPrimary),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: c.marca),
           ),
         ],
       ),
@@ -779,6 +812,8 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Botão confirmar ───────────────────────────────────────────────────
 
   Widget _buildBotaoConfirmar() {
+    final c = context.cores;
+
     return SizedBox(
       width: double.infinity,
       height: 48,
@@ -794,8 +829,9 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
             : const Icon(Icons.check_circle_outline_rounded),
         label: Text(_enviando ? 'A processar...' : 'Confirmar'),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              _motivo == 'ERRO_PREENCHIMENTO' ? _kAccent : _kPrimary,
+          backgroundColor: _motivo == 'ERRO_PREENCHIMENTO'
+              ? AppColors.vermelhoMarca
+              : c.marcaBotao,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -806,6 +842,7 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
   // ─── Resultado pós-sucesso ─────────────────────────────────────────────
 
   Widget _buildResultado() {
+    final c = context.cores;
     final r = _resultado!;
     return Center(
       child: Padding(
@@ -813,25 +850,25 @@ final pdfDoc = NotaRetificativaPdfModel.deDevolucaoResponse(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_rounded, color: _kSuccess, size: 64),
+            Icon(Icons.check_circle_rounded, color: c.sucesso, size: 64),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Nota de Crédito emitida',
               style: TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.bold, color: _kPrimary),
+                  fontSize: 17, fontWeight: FontWeight.bold, color: c.marca),
             ),
             const SizedBox(height: 8),
             Text(
               r.referenciaNotaCredito,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700, color: _kPrimary),
+              style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700, color: c.marca),
             ),
             const SizedBox(height: 4),
             Text(
               'Valor creditado: ${_currencyFmt.format(r.valorCreditado)}',
-              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              style: TextStyle(fontSize: 13, color: c.textoSecundario),
             ),
-const SizedBox(height: 12),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -839,8 +876,8 @@ const SizedBox(height: 12),
                 icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                 label: const Text('Gerar PDF'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kAccent,
-                  side: const BorderSide(color: _kAccent),
+                  foregroundColor: c.acentoTexto,
+                  side: BorderSide(color: c.acentoTexto),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -856,7 +893,7 @@ const SizedBox(height: 12),
                   icon: const Icon(Icons.add_shopping_cart_rounded),
                   label: const Text('Criar pedido com novo produto'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kPrimary,
+                    backgroundColor: c.marcaBotao,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -871,8 +908,8 @@ const SizedBox(height: 12),
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context, r),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kPrimary,
-                  side: const BorderSide(color: _kPrimary),
+                  foregroundColor: c.marca,
+                  side: BorderSide(color: c.marca),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -886,6 +923,7 @@ const SizedBox(height: 12),
     );
   }
 }
+
 class DevolucaoTrocaArgs {
   final int idPedido;
   final int idDocumentoOrigem;
@@ -899,6 +937,7 @@ class DevolucaoTrocaArgs {
     this.documentoOrigem,
   });
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Linha reutilizável de item (checkbox + stepper de quantidade)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -926,23 +965,27 @@ class _LinhaItemDevolucao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: selecionado ? _kPrimary.withOpacity(0.05) : Colors.transparent,
+        color: selecionado
+            ? c.marca.withValues(alpha: context.escuro ? 0.10 : 0.05)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: selecionado
-              ? _kPrimary.withOpacity(0.25)
-              : Colors.grey.shade200,
+              ? c.marca.withValues(alpha: 0.25)
+              : c.borda,
         ),
       ),
       child: Row(
         children: [
           Checkbox(
             value: selecionado,
-            activeColor: _kPrimary,
+            activeColor: c.marcaBotao,
             onChanged: (v) => onSelecionarChanged(v ?? false),
           ),
           Expanded(
@@ -956,7 +999,7 @@ class _LinhaItemDevolucao extends StatelessWidget {
                 ),
                 Text(
                   '${currencyFmt.format(precoUnitario)} × qtd (máx. $quantidadeMaxima)',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 11, color: c.textoSecundario),
                 ),
               ],
             ),
@@ -965,7 +1008,7 @@ class _LinhaItemDevolucao extends StatelessWidget {
             IconButton(
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.remove_circle_outline, size: 20),
-              color: _kPrimary,
+              color: c.marca,
               onPressed: quantidade > 1
                   ? () => onQuantidadeChanged(quantidade - 1)
                   : null,
@@ -977,7 +1020,7 @@ class _LinhaItemDevolucao extends StatelessWidget {
             IconButton(
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.add_circle_outline, size: 20),
-              color: _kPrimary,
+              color: c.marca,
               onPressed: quantidade < quantidadeMaxima
                   ? () => onQuantidadeChanged(quantidade + 1)
                   : null,

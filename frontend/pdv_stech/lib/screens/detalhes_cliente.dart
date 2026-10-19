@@ -2,13 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../../../theme/app_theme.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul        → context.cores.marca (texto/ícone/borda)
+//                   context.cores.marcaBotao (fundo de botão)
+//                   AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho da tabela)
+//   _kVermelho    → AppColors.vermelhoMarca (FUNDO: ícone da AppBar, snackbar de erro)
+//                   context.cores.acentoTexto (vermelho como texto/ícone/borda)
+//                   context.cores.perigo (mensagem de erro de carregamento)
+//   _kBranco      → context.cores.superficie (fundo) / AppColors.branco (sobre marca)
+//   _kCinzaClaro  → context.cores.fundo
+//   _kCinzaTexto  → context.cores.textoSecundario
+//   Colors.green  → context.cores.sucesso
+//   Colors.orange → context.cores.aviso
+//   0xFFE5E7EB    → context.cores.borda
+//
+// NOTA: ajusta o import do tema ao caminho real deste ficheiro.
 
 class DetalhesClienteScreen extends StatefulWidget {
   final ClienteModel cliente;
@@ -42,36 +53,36 @@ class _DetalhesClienteScreenState extends State<DetalhesClienteScreen> {
   }
 
   Future<void> _carregar() async {
-  if (mounted) {
-    setState(() {
-      _carregando = true;
-      _erroLocal = null;
-    });
-  }
-
-  try {
-    // Carrega extracto documental (facturas e VDs)
-    final docProvider = context.read<DocumentoFiscalProvider>();
-    await docProvider.carregarExtractoDocumentalCliente(widget.cliente.id);
-
-    // Carrega histórico comercial de crédito
-    final pedidoProvider = context.read<PedidoProvider>();
-    await pedidoProvider.carregarExtractoCliente(widget.cliente.id);
-
-    if (!mounted) return;
-
-    setState(() {
-      _extractoDocumental = docProvider.extractoDocumentalCliente;
-      _extracto = pedidoProvider.extractoCliente;
-    });
-  } catch (e) {
-    _erroLocal = e.toString();
-  } finally {
     if (mounted) {
-      setState(() => _carregando = false);
+      setState(() {
+        _carregando = true;
+        _erroLocal = null;
+      });
+    }
+
+    try {
+      // Carrega extracto documental (facturas e VDs)
+      final docProvider = context.read<DocumentoFiscalProvider>();
+      await docProvider.carregarExtractoDocumentalCliente(widget.cliente.id);
+
+      // Carrega histórico comercial de crédito
+      final pedidoProvider = context.read<PedidoProvider>();
+      await pedidoProvider.carregarExtractoCliente(widget.cliente.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _extractoDocumental = docProvider.extractoDocumentalCliente;
+        _extracto = pedidoProvider.extractoCliente;
+      });
+    } catch (e) {
+      _erroLocal = e.toString();
+    } finally {
+      if (mounted) {
+        setState(() => _carregando = false);
+      }
     }
   }
-}
 
   List<Map<String, dynamic>> get _linhas {
     final raw = _extracto['linhas'];
@@ -85,23 +96,23 @@ class _DetalhesClienteScreenState extends State<DetalhesClienteScreen> {
   }
 
   // Getters do extracto documental
-List<Map<String, dynamic>> get _linhasDocumentais {
-  final raw = _extractoDocumental['linhas'];
-  if (raw is List) {
-    return raw
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
+  List<Map<String, dynamic>> get _linhasDocumentais {
+    final raw = _extractoDocumental['linhas'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return [];
   }
-  return [];
-}
 
-int get _totalDocumentosEmitidos =>
-    (_extractoDocumental['totalDocumentos'] as num?)?.toInt() ??
-    _linhasDocumentais.length;
+  int get _totalDocumentosEmitidos =>
+      (_extractoDocumental['totalDocumentos'] as num?)?.toInt() ??
+      _linhasDocumentais.length;
 
-double get _somaTotalDocumentos =>
-    (_extractoDocumental['somaTotal'] as num?)?.toDouble() ?? 0.0;
+  double get _somaTotalDocumentos =>
+      (_extractoDocumental['somaTotal'] as num?)?.toDouble() ?? 0.0;
 
   double get _totalDivida => (_extracto['totalDivida'] as num?)?.toDouble() ?? 0;
   double get _totalPago => (_extracto['totalPago'] as num?)?.toDouble() ?? 0;
@@ -110,28 +121,33 @@ double get _somaTotalDocumentos =>
   bool get _ehDevedor => _saldo > 0.009;
 
   String get _situacaoLabel => _ehDevedor ? 'Em dívida' : 'Regular';
-  Color get _situacaoCor => _ehDevedor ? _kVermelho : Colors.green;
+
+  /// Cor da situação como TEXTO/ÍCONE (e, com alpha, como fundo translúcido).
+  /// Agora depende do tema, por isso usa o `context` do State.
+  Color get _situacaoCor =>
+      _ehDevedor ? context.cores.acentoTexto : context.cores.sucesso;
 
   int get _quantidadeRegistos => _linhas.length;
 
-int get _totalDocumentos =>
-    _linhas.where((l) => l['idDocumentoFacturaCredito'] != null).length;
+  int get _totalDocumentos =>
+      _linhas.where((l) => l['idDocumentoFacturaCredito'] != null).length;
 
-int get _pedidosPagos =>
-    _linhas.where((l) => (l['statusPagamento'] ?? '').toString().toUpperCase() == 'PAGO').length;
+  int get _pedidosPagos => _linhas
+      .where((l) =>
+          (l['statusPagamento'] ?? '').toString().toUpperCase() == 'PAGO')
+      .length;
 
-int get _pedidosPendentes =>
-    _linhas.where((l) {
-      final status = (l['statusPagamento'] ?? '').toString().toUpperCase();
-      return status == 'PENDENTE' || status == 'PARCIAL';
-    }).length;
+  int get _pedidosPendentes => _linhas.where((l) {
+        final status = (l['statusPagamento'] ?? '').toString().toUpperCase();
+        return status == 'PENDENTE' || status == 'PARCIAL';
+      }).length;
 
-String get _mensagemSituacao {
-  if (_ehDevedor) {
-    return 'Cliente devedor: possui saldo pendente e requer acompanhamento comercial.';
+  String get _mensagemSituacao {
+    if (_ehDevedor) {
+      return 'Cliente devedor: possui saldo pendente e requer acompanhamento comercial.';
+    }
+    return 'Cliente regular: não possui saldo pendente neste momento.';
   }
-  return 'Cliente regular: não possui saldo pendente neste momento.';
-}
 
   Future<void> _abrirDetalhesPedido(Map<String, dynamic> linha) async {
     final idPedido = (linha['idPedido'] as num?)?.toInt();
@@ -145,7 +161,7 @@ String get _mensagemSituacao {
     if (pedido == null) {
       _snack(
         provider.errorMessage ?? 'Não foi possível abrir o pedido.',
-        _kVermelho,
+        AppColors.vermelhoMarca,
       );
       return;
     }
@@ -160,32 +176,35 @@ String get _mensagemSituacao {
     }
   }
 
-Future<void> _gerarPdf() async {
-  if (_gerandoPdf) return;
-  setState(() => _gerandoPdf = true);
-  try {
-    final file = await ExtratoPdfService.instance.gerarExtractoDocumentalCliente(
-      cliente: widget.cliente,
-      extractoDocumental: _extractoDocumental,
-    );
-    await ExtratoPdfService.instance.abrirPdf(file);
-  } catch (e) {
-    if (mounted) {
-      _snack('Erro ao gerar/abrir PDF: $e', _kVermelho);
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _gerandoPdf = false);
+  Future<void> _gerarPdf() async {
+    if (_gerandoPdf) return;
+    setState(() => _gerandoPdf = true);
+    try {
+      final file =
+          await ExtratoPdfService.instance.gerarExtractoDocumentalCliente(
+        cliente: widget.cliente,
+        extractoDocumental: _extractoDocumental,
+      );
+      await ExtratoPdfService.instance.abrirPdf(file);
+    } catch (e) {
+      if (mounted) {
+        _snack('Erro ao gerar/abrir PDF: $e', AppColors.vermelhoMarca);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _gerandoPdf = false);
+      }
     }
   }
-}
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _snack(String mensagem, Color cor) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
+        content: Text(mensagem, style: const TextStyle(color: Colors.white)),
         backgroundColor: cor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -195,60 +214,63 @@ Future<void> _gerarPdf() async {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       body: _carregando
-          ? const Center(child: CircularProgressIndicator(color: _kAzul))
+          ? Center(child: CircularProgressIndicator(color: c.marca))
           : _erroLocal != null
               ? _ErroState(
                   erro: _erroLocal!,
                   onRecarregar: _carregar,
                 )
               : RefreshIndicator(
-                  color: _kAzul,
+                  color: c.marca,
+                  backgroundColor: c.superficie,
                   onRefresh: _carregar,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
                     children: [
-  _ClienteHeaderCard(cliente: widget.cliente),
-  const SizedBox(height: 12),
-  _AcoesCard(
-    gerandoPdf: _gerandoPdf,
-    onGerarPdf: _gerarPdf,
-  ),
-  const SizedBox(height: 12),
-  // ── SECÇÃO PRINCIPAL: extracto documental ──
-  _ExtractoDocumentalCard(
-    linhas: _linhasDocumentais,
-    totalDocumentos: _totalDocumentosEmitidos,
-    somaTotal: _somaTotalDocumentos,
-    currencyFmt: _currencyFmt,
-    dateFmt: _dateFmt,
-  ),
-  const SizedBox(height: 12),
-  // ── SECÇÃO COMPLEMENTAR: histórico comercial ──
-  _ResumoFinanceiroCard(
-    totalDivida: _totalDivida,
-    totalPago: _totalPago,
-    saldo: _saldo,
-    situacaoLabel: _situacaoLabel,
-    situacaoCor: _situacaoCor,
-    currencyFmt: _currencyFmt,
-    quantidadeRegistos: _quantidadeRegistos,
-    pedidosPagos: _pedidosPagos,
-    pedidosPendentes: _pedidosPendentes,
-    totalDocumentos: _totalDocumentos,
-    mensagemSituacao: _mensagemSituacao,
-  ),
-  const SizedBox(height: 12),
-  _HistoricoCard(
-    linhas: _linhas,
-    currencyFmt: _currencyFmt,
-    dateFmt: _dateFmt,
-    onAbrirPedido: _abrirDetalhesPedido,
-  ),
-],
+                      _ClienteHeaderCard(cliente: widget.cliente),
+                      const SizedBox(height: 12),
+                      _AcoesCard(
+                        gerandoPdf: _gerandoPdf,
+                        onGerarPdf: _gerarPdf,
+                      ),
+                      const SizedBox(height: 12),
+                      // ── SECÇÃO PRINCIPAL: extracto documental ──
+                      _ExtractoDocumentalCard(
+                        linhas: _linhasDocumentais,
+                        totalDocumentos: _totalDocumentosEmitidos,
+                        somaTotal: _somaTotalDocumentos,
+                        currencyFmt: _currencyFmt,
+                        dateFmt: _dateFmt,
+                      ),
+                      const SizedBox(height: 12),
+                      // ── SECÇÃO COMPLEMENTAR: histórico comercial ──
+                      _ResumoFinanceiroCard(
+                        totalDivida: _totalDivida,
+                        totalPago: _totalPago,
+                        saldo: _saldo,
+                        situacaoLabel: _situacaoLabel,
+                        situacaoCor: _situacaoCor,
+                        currencyFmt: _currencyFmt,
+                        quantidadeRegistos: _quantidadeRegistos,
+                        pedidosPagos: _pedidosPagos,
+                        pedidosPendentes: _pedidosPendentes,
+                        totalDocumentos: _totalDocumentos,
+                        mensagemSituacao: _mensagemSituacao,
+                      ),
+                      const SizedBox(height: 12),
+                      _HistoricoCard(
+                        linhas: _linhas,
+                        currencyFmt: _currencyFmt,
+                        dateFmt: _dateFmt,
+                        onAbrirPedido: _abrirDetalhesPedido,
+                      ),
+                    ],
                   ),
                 ),
     );
@@ -256,20 +278,22 @@ Future<void> _gerarPdf() async {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.business_center_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -310,18 +334,21 @@ class _ClienteHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return _CardBase(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: _kAzul.withOpacity(0.12),
+            backgroundColor:
+                c.marca.withValues(alpha: context.escuro ? 0.18 : 0.12),
             child: Text(
               cliente.iniciais,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: _kAzul,
+                color: c.marca,
                 fontSize: 15,
               ),
             ),
@@ -333,8 +360,8 @@ class _ClienteHeaderCard extends StatelessWidget {
               children: [
                 Text(
                   cliente.nomeCompleto,
-                  style: const TextStyle(
-                    color: _kAzul,
+                  style: TextStyle(
+                    color: c.marca,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -346,7 +373,9 @@ class _ClienteHeaderCard extends StatelessWidget {
                   children: [
                     _MiniInfo(
                       icon: Icons.badge_outlined,
-                      label: cliente.nuit?.isNotEmpty == true ? cliente.nuit! : 'NUIT: —',
+                      label: cliente.nuit?.isNotEmpty == true
+                          ? cliente.nuit!
+                          : 'NUIT: —',
                     ),
                     _MiniInfo(
                       icon: Icons.phone_outlined,
@@ -408,138 +437,136 @@ class _ResumoFinanceiroCard extends StatelessWidget {
     required this.mensagemSituacao,
   });
 
-@override
-Widget build(BuildContext context) {
-  return _CardBase(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const _SectionTitle(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Situação comercial',
-            ),
-            const Spacer(),
-            _StatusBadge(
-              label: situacaoLabel,
-              color: situacaoCor,
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
+  @override
+  Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
 
-        Row(
-          children: [
-            Expanded(
-              child: _InfoMetric(
-                label: 'Total em crédito',
-                value: currencyFmt.format(totalDivida),
-                icon: Icons.receipt_long_rounded,
-                color: _kAzul,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoMetric(
-                label: 'Total pago',
-                value: currencyFmt.format(totalPago),
-                icon: Icons.payments_rounded,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoMetric(
-                label: 'Saldo actual',
-                value: currencyFmt.format(saldo),
-                icon: Icons.warning_amber_rounded,
-                color: saldo > 0 ? _kVermelho : Colors.green,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        Row(
-          children: [
-            Expanded(
-              child: _InfoMetric(
-                label: 'Registos',
-                value: '$quantidadeRegistos',
-                icon: Icons.format_list_numbered_rounded,
-                color: _kAzul,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoMetric(
-                label: 'Pagos',
-                value: '$pedidosPagos',
-                icon: Icons.check_circle_outline_rounded,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoMetric(
-                label: 'Pend./Parc.',
-                value: '$pedidosPendentes',
-                icon: Icons.schedule_rounded,
-                color: Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoMetric(
-                label: 'Documentos',
-                value: '$totalDocumentos',
-                icon: Icons.description_outlined,
-                color: _kAzul,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: situacaoCor.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: situacaoCor.withOpacity(0.25)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return _CardBase(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(
-                _ehCorDevedor(situacaoCor)
-                    ? Icons.warning_amber_rounded
-                    : Icons.verified_rounded,
-                color: situacaoCor,
-                size: 18,
+              const _SectionTitle(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Situação comercial',
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
+              _StatusBadge(
+                label: situacaoLabel,
+                color: situacaoCor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
               Expanded(
-                child: Text(
-                  mensagemSituacao,
-                  style: TextStyle(
-                    color: situacaoCor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: _InfoMetric(
+                  label: 'Total em crédito',
+                  value: currencyFmt.format(totalDivida),
+                  icon: Icons.receipt_long_rounded,
+                  color: c.marca,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Total pago',
+                  value: currencyFmt.format(totalPago),
+                  icon: Icons.payments_rounded,
+                  color: c.sucesso,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Saldo actual',
+                  value: currencyFmt.format(saldo),
+                  icon: Icons.warning_amber_rounded,
+                  color: saldo > 0 ? c.acentoTexto : c.sucesso,
                 ),
               ),
             ],
           ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Registos',
+                  value: '$quantidadeRegistos',
+                  icon: Icons.format_list_numbered_rounded,
+                  color: c.marca,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Pagos',
+                  value: '$pedidosPagos',
+                  icon: Icons.check_circle_outline_rounded,
+                  color: c.sucesso,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Pend./Parc.',
+                  value: '$pedidosPendentes',
+                  icon: Icons.schedule_rounded,
+                  color: c.aviso,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InfoMetric(
+                  label: 'Documentos',
+                  value: '$totalDocumentos',
+                  icon: Icons.description_outlined,
+                  color: c.marca,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: situacaoCor.withValues(alpha: escuro ? 0.12 : 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: situacaoCor.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _ehCorDevedor(context, situacaoCor)
+                      ? Icons.warning_amber_rounded
+                      : Icons.verified_rounded,
+                  color: situacaoCor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    mensagemSituacao,
+                    style: TextStyle(
+                      color: situacaoCor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -557,6 +584,8 @@ class _AcoesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return _CardBase(
       child: Row(
         children: [
@@ -580,8 +609,12 @@ class _AcoesCard extends StatelessWidget {
                 : const Icon(Icons.picture_as_pdf_outlined, size: 18),
             label: Text(gerandoPdf ? 'A preparar...' : 'Gerar PDF'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _kAzul,
-              foregroundColor: _kBranco,
+              backgroundColor: c.marcaBotao,
+              foregroundColor: AppColors.branco,
+              // Estado desactivado explícito: o spinner branco tem de
+              // continuar visível em ambos os temas enquanto prepara.
+              disabledBackgroundColor: c.marcaBotao.withValues(alpha: 0.6),
+              disabledForegroundColor: Colors.white70,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -612,34 +645,38 @@ class _HistoricoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return _CardBase(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-     Row(
-  children: [
-    const _SectionTitle(
-      icon: Icons.history_rounded,
-      title: 'Histórico comercial',
-    ),
-    const Spacer(),
-    Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _kAzul.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '${linhas.length} registo(s)',
-        style: const TextStyle(
-          color: _kAzul,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    ),
-  ],
-),
+          Row(
+            children: [
+              const _SectionTitle(
+                icon: Icons.history_rounded,
+                title: 'Histórico comercial',
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.marca
+                      .withValues(alpha: context.escuro ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${linhas.length} registo(s)',
+                  style: TextStyle(
+                    color: c.marca,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           if (linhas.isEmpty)
             const _EmptyBox(
@@ -677,28 +714,31 @@ class _LinhaHistorico extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     final referencia = (linha['referencia'] ?? '—').toString();
     final total = (linha['total'] as num?)?.toDouble() ?? 0;
     final valorPago = (linha['valorPago'] as num?)?.toDouble() ?? 0;
     final saldo = (linha['saldo'] as num?)?.toDouble() ?? 0;
     final statusPagamento = (linha['statusPagamento'] ?? '—').toString();
     final idDocumento = linha['idDocumentoFacturaCredito'];
-    final corStatus = _statusColor(statusPagamento);
+    final corStatus = _statusColor(context, statusPagamento);
     final idPedido = (linha['idPedido'] ?? '—').toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 15,
-            backgroundColor: corStatus.withOpacity(0.10),
+            backgroundColor: corStatus.withValues(alpha: escuro ? 0.18 : 0.10),
             child: Icon(
               Icons.receipt_long_rounded,
               color: corStatus,
@@ -711,32 +751,34 @@ class _LinhaHistorico extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-          Text(
-  referencia,
-  maxLines: 1,
-  overflow: TextOverflow.ellipsis,
-  style: const TextStyle(
-    color: _kAzul,
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-  ),
-),
-const SizedBox(height: 2),
-Text(
-  'Pedido #$idPedido',
-  style: const TextStyle(
-    fontSize: 11,
-    color: _kCinzaTexto,
-  ),
-),
-const SizedBox(height: 2),
-Text(
-  idDocumento != null ? 'Doc. #$idDocumento' : 'Documento pendente',
-  style: TextStyle(
-    fontSize: 11,
-    color: idDocumento != null ? _kCinzaTexto : Colors.orange,
-  ),
-),
+                Text(
+                  referencia,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: c.marca,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Pedido #$idPedido',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: c.textoSecundario,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  idDocumento != null
+                      ? 'Doc. #$idDocumento'
+                      : 'Documento pendente',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: idDocumento != null ? c.textoSecundario : c.aviso,
+                  ),
+                ),
               ],
             ),
           ),
@@ -752,7 +794,7 @@ Text(
             child: _TextPair(
               label: 'Pago',
               value: currencyFmt.format(valorPago),
-              valueColor: Colors.green,
+              valueColor: c.sucesso,
             ),
           ),
           Expanded(
@@ -760,7 +802,7 @@ Text(
             child: _TextPair(
               label: 'Saldo',
               value: currencyFmt.format(saldo),
-              valueColor: saldo > 0 ? _kVermelho : Colors.green,
+              valueColor: saldo > 0 ? c.acentoTexto : c.sucesso,
             ),
           ),
           _StatusBadge(
@@ -768,25 +810,25 @@ Text(
             color: corStatus,
           ),
           const SizedBox(width: 8),
-       Tooltip(
-  message: 'Abrir detalhe do pedido',
-  child: InkWell(
-    onTap: () => onAbrirPedido(linha),
-    borderRadius: BorderRadius.circular(6),
-    child: Container(
-      padding: const EdgeInsets.all(7),
-      decoration: BoxDecoration(
-        color: _kAzul.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: const Icon(
-        Icons.visibility_outlined,
-        size: 17,
-        color: _kAzul,
-      ),
-    ),
-  ),
-),
+          Tooltip(
+            message: 'Abrir detalhe do pedido',
+            child: InkWell(
+              onTap: () => onAbrirPedido(linha),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: c.marca.withValues(alpha: escuro ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.visibility_outlined,
+                  size: 17,
+                  color: c.marca,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -804,12 +846,14 @@ class _CardBase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Card(
-      color: _kBranco,
+      color: c.superficie,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -830,14 +874,16 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Row(
       children: [
-        Icon(icon, color: _kAzul, size: 18),
+        Icon(icon, color: c.marca, size: 18),
         const SizedBox(width: 7),
         Text(
           title,
-          style: const TextStyle(
-            color: _kAzul,
+          style: TextStyle(
+            color: c.marca,
             fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
@@ -862,12 +908,15 @@ class _InfoMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
+        color: color.withValues(alpha: escuro ? 0.12 : 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: color.withValues(alpha: escuro ? 0.30 : 0.18)),
       ),
       child: Row(
         children: [
@@ -879,8 +928,8 @@ class _InfoMetric extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: _kCinzaTexto,
+                  style: TextStyle(
+                    color: c.textoSecundario,
                     fontSize: 11,
                   ),
                 ),
@@ -915,15 +964,17 @@ class _MiniInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: _kCinzaTexto),
+        Icon(icon, size: 13, color: c.textoSecundario),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: _kCinzaTexto,
+          style: TextStyle(
+            color: c.textoSecundario,
             fontSize: 12,
           ),
         ),
@@ -945,13 +996,15 @@ class _TextPair extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: _kCinzaTexto,
+          style: TextStyle(
+            color: c.textoSecundario,
             fontSize: 10,
           ),
         ),
@@ -961,7 +1014,7 @@ class _TextPair extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: valueColor ?? _kAzul,
+            color: valueColor ?? c.marca,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -982,12 +1035,14 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final escuro = context.escuro;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: escuro ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: escuro ? 0.40 : 0.25)),
       ),
       child: Text(
         label,
@@ -1012,22 +1067,24 @@ class _EmptyBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Column(
         children: [
-          Icon(icon, color: _kCinzaTexto, size: 34),
+          Icon(icon, color: c.textoSecundario, size: 34),
           const SizedBox(height: 8),
           Text(
             text,
-            style: const TextStyle(
-              color: _kCinzaTexto,
+            style: TextStyle(
+              color: c.textoSecundario,
               fontSize: 13,
             ),
           ),
@@ -1048,22 +1105,24 @@ class _ErroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
-              color: _kVermelho,
+              color: c.perigo,
               size: 52,
             ),
             const SizedBox(height: 12),
             Text(
               erro,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.perigo),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -1071,8 +1130,8 @@ class _ErroState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Tentar novamente'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kAzul,
-                foregroundColor: _kBranco,
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
               ),
             ),
           ],
@@ -1086,18 +1145,22 @@ class _ErroState extends StatelessWidget {
 // Helpers
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// A cor de "devedor" é `acentoTexto`; o contexto é necessário porque a
+/// cor depende do tema.
+bool _ehCorDevedor(BuildContext context, Color cor) =>
+    cor == context.cores.acentoTexto;
 
-  bool _ehCorDevedor(Color cor) => cor == _kVermelho;
-Color _statusColor(String status) {
+Color _statusColor(BuildContext context, String status) {
+  final c = context.cores;
   switch (status.toUpperCase()) {
     case 'PAGO':
-      return Colors.green;
+      return c.sucesso;
     case 'PARCIAL':
-      return _kAzul;
+      return c.marca;
     case 'PENDENTE':
-      return _kVermelho;
+      return c.acentoTexto;
     default:
-      return _kCinzaTexto;
+      return c.textoSecundario;
   }
 }
 
@@ -1112,8 +1175,6 @@ String _statusLabel(String status) {
     default:
       return status;
   }
-
-
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1137,6 +1198,9 @@ class _ExtractoDocumentalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     return _CardBase(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1152,13 +1216,13 @@ class _ExtractoDocumentalCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _kAzul.withOpacity(0.08),
+                  color: c.marca.withValues(alpha: escuro ? 0.15 : 0.08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$totalDocumentos documento(s)',
-                  style: const TextStyle(
-                    color: _kAzul,
+                  style: TextStyle(
+                    color: c.marca,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1170,8 +1234,7 @@ class _ExtractoDocumentalCard extends StatelessWidget {
           if (linhas.isEmpty)
             const _EmptyBox(
               icon: Icons.receipt_long_outlined,
-              text:
-                  'Nenhuma factura ou VD emitida para este cliente.',
+              text: 'Nenhuma factura ou VD emitida para este cliente.',
             )
           else ...[
             // Cabeçalho da tabela
@@ -1179,7 +1242,9 @@ class _ExtractoDocumentalCard extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: _kAzul,
+                color: escuro
+                    ? AppColors.azulMarcaEscuro
+                    : AppColors.azulMarca,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -1231,25 +1296,26 @@ class _ExtractoDocumentalCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _kAzul.withOpacity(0.06),
+                color: c.marca.withValues(alpha: escuro ? 0.12 : 0.06),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _kAzul.withOpacity(0.2)),
+                border: Border.all(
+                    color: c.marca.withValues(alpha: escuro ? 0.35 : 0.2)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Total de documentos: $totalDocumentos',
-                    style: const TextStyle(
-                      color: _kAzul,
+                    style: TextStyle(
+                      color: c.marca,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   Text(
                     currencyFmt.format(somaTotal),
-                    style: const TextStyle(
-                      color: _kVermelho,
+                    style: TextStyle(
+                      color: c.acentoTexto,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1277,25 +1343,25 @@ class _LinhaDocumental extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     final referencia = (linha['referencia'] ?? '—').toString();
     final tipo = (linha['tipoDocumento'] ?? '—').toString();
     final refPedido = (linha['referenciaPedido'] ?? '—').toString();
     final emitidoEmStr = linha['emitidoEm']?.toString();
-    final emitidoEm = emitidoEmStr != null
-        ? DateTime.tryParse(emitidoEmStr)
-        : null;
-    final valor =
-        (linha['valorTotal'] as num?)?.toDouble() ?? 0.0;
+    final emitidoEm =
+        emitidoEmStr != null ? DateTime.tryParse(emitidoEmStr) : null;
+    final valor = (linha['valorTotal'] as num?)?.toDouble() ?? 0.0;
 
-    final corTipo = tipo == 'FAT' ? _kAzul : _kVermelho;
+    final corTipo = tipo == 'FAT' ? c.marca : c.acentoTexto;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Row(
         children: [
@@ -1306,18 +1372,19 @@ class _LinhaDocumental extends StatelessWidget {
               children: [
                 Text(
                   referencia,
-                  style: const TextStyle(
-                    color: _kAzul,
+                  style: TextStyle(
+                    color: c.marca,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: corTipo.withOpacity(0.10),
+                    color: corTipo
+                        .withValues(alpha: context.escuro ? 0.18 : 0.10),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -1336,8 +1403,8 @@ class _LinhaDocumental extends StatelessWidget {
             flex: 2,
             child: Text(
               refPedido,
-              style: const TextStyle(
-                color: _kCinzaTexto,
+              style: TextStyle(
+                color: c.textoSecundario,
                 fontSize: 11,
               ),
             ),
@@ -1346,8 +1413,8 @@ class _LinhaDocumental extends StatelessWidget {
             flex: 2,
             child: Text(
               emitidoEm != null ? dateFmt.format(emitidoEm) : '—',
-              style: const TextStyle(
-                color: _kCinzaTexto,
+              style: TextStyle(
+                color: c.textoSecundario,
                 fontSize: 11,
               ),
             ),
@@ -1357,8 +1424,8 @@ class _LinhaDocumental extends StatelessWidget {
             child: Text(
               currencyFmt.format(valor),
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: _kAzul,
+              style: TextStyle(
+                color: c.marca,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),

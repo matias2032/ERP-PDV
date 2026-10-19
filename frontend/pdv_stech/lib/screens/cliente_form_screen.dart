@@ -4,17 +4,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
+import '../../../theme/app_theme.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul        → context.cores.marca (texto/ícone/borda)
+//                   context.cores.marcaBotao (fundo de snackbar de sucesso)
+//                   AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho    → AppColors.vermelhoMarca (FUNDO: botão salvar, ícone da AppBar,
+//                   snackbar de erro; texto branco por cima)
+//                   context.cores.acentoTexto (bordas de erro dos campos)
+//   _kBranco      → context.cores.superficie (fundo) / AppColors.branco (sobre marca)
+//   _kCinzaClaro  → context.cores.fundo
+//   _kCinzaTexto  → context.cores.textoSecundario
+//   grey.shade200 → context.cores.borda (bordas dos cartões)
+//   grey.shade300 → borda dos campos (clara) / 0xFF6B7499 (escura, 3:1)
+//
+// NOTA: ajusta o import do tema ao caminho real deste ficheiro.
 
 /// Perfil fixo que este formulário usa
 const int    _kIdPerfilEmpresa   = 1;
 const String _kNomePerfilEmpresa = 'Empresa';
+
+/// Borda dos campos de texto: no escuro precisa de 3:1 contra a superfície
+/// (mesmo valor `bordaCampo` do tema escuro).
+Color _bordaCampo(BuildContext context) => context.escuro
+    ? const Color(0xFF6B7499)
+    : Colors.grey.shade300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -118,12 +134,15 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(String mensagem, {bool erro = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(mensagem, style: const TextStyle(color: Colors.white)),
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : context.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -136,13 +155,15 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.pop(context, _houveAlteracoes);
         return false;
       },
       child: Scaffold(
-        backgroundColor: _kCinzaClaro,
+        backgroundColor: c.fundo,
         appBar: _buildAppBar(),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -179,8 +200,10 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
@@ -191,11 +214,11 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.business_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           Text(
@@ -213,22 +236,25 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
   // ─── Banner de perfil fixo ─────────────────────────────────────────────────
 
   Widget _BannerPerfil() {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _kAzul.withOpacity(0.08),
+        color: c.marca.withValues(alpha: escuro ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kAzul.withOpacity(0.2)),
+        border: Border.all(
+            color: c.marca.withValues(alpha: escuro ? 0.35 : 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: _kAzul, size: 18),
+          Icon(Icons.info_outline_rounded, color: c.marca, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(
-                    fontSize: 13, color: _kAzul),
+                style: TextStyle(fontSize: 13, color: c.marca),
                 children: [
                   const TextSpan(text: 'Este formulário cadastra clientes com perfil '),
                   TextSpan(
@@ -248,11 +274,14 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
   // ─── Card: Identificação ──────────────────────────────────────────────────
 
   Widget _buildCardIdentificacao() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -322,11 +351,14 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
   // ─── Card: Contacto ───────────────────────────────────────────────────────
 
   Widget _buildCardContacto() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -392,15 +424,17 @@ class _TituloSecao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Row(
       children: [
-        Icon(icon, color: _kAzul, size: 20),
+        Icon(icon, color: c.marca, size: 20),
         const SizedBox(width: 8),
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: _kAzul)),
+                color: c.marca)),
       ],
     );
   }
@@ -431,6 +465,9 @@ class _Campo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final borda = _bordaCampo(context);
+
     // Lê o provider para desabilitar durante salvamento
     final salvando =
         context.watch<ClienteFormProvider>().salvando;
@@ -447,31 +484,33 @@ class _Campo extends StatelessWidget {
         labelText: label,
         hintText: hint,
         hintStyle: TextStyle(
-            color: _kCinzaTexto.withOpacity(0.6), fontSize: 12),
-        prefixIcon: Icon(icon, color: _kAzul, size: 20),
+            color: c.textoSecundario
+                .withValues(alpha: context.escuro ? 0.8 : 0.6),
+            fontSize: 12),
+        prefixIcon: Icon(icon, color: c.marca, size: 20),
         filled: true,
-        fillColor: _kBranco,
+        fillColor: c.superficie,
         contentPadding:
             const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kAzul, width: 1.5),
+          borderSide: BorderSide(color: c.marca, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kVermelho),
+          borderSide: BorderSide(color: c.acentoTexto),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kVermelho, width: 1.5),
+          borderSide: BorderSide(color: c.acentoTexto, width: 1.5),
         ),
       ),
     );
@@ -498,7 +537,7 @@ class _BotaoSalvar extends StatelessWidget {
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: _kBranco),
+                  strokeWidth: 2, color: AppColors.branco),
             )
           : const Icon(Icons.save_rounded),
       label: Text(
@@ -506,9 +545,13 @@ class _BotaoSalvar extends StatelessWidget {
         style: const TextStyle(fontSize: 16, letterSpacing: 0.5),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: _kVermelho,
-        foregroundColor: _kBranco,
-        disabledBackgroundColor: _kVermelho.withOpacity(0.5),
+        backgroundColor: AppColors.vermelhoMarca,
+        foregroundColor: AppColors.branco,
+        disabledBackgroundColor:
+            AppColors.vermelhoMarca.withValues(alpha: 0.5),
+        // Texto/ícone legíveis no estado desactivado (no escuro o tema
+        // usaria um cinzento fraco sobre o vermelho translúcido).
+        disabledForegroundColor: Colors.white70,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12)),

@@ -3,17 +3,25 @@
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'cotacao_detalhes_screen.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
-const _kVerde      = Color(0xFF1B8A4C);
-const _kLaranja    = Color(0xFFE08A00);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul        → context.cores.marca (texto/ícone/borda)
+//                   context.cores.marcaBotao (fundo de botão)
+//                   AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho da tabela)
+//   _kVermelho    → AppColors.vermelhoMarca (FUNDO: ícone da AppBar, snackbar de erro)
+//                   context.cores.acentoTexto (vermelho como texto/ícone)
+//                   context.cores.perigo (mensagem de erro de carregamento)
+//   _kBranco      → context.cores.superficie (fundo) / AppColors.branco (sobre marca)
+//   _kCinzaClaro  → context.cores.fundo
+//   _kCinzaTexto  → context.cores.textoSecundario
+//   _kVerde       → context.cores.sucesso
+//   _kLaranja     → (não era usada neste ficheiro; removida)
+//   0xFFF0F2FA    → context.cores.linhaAlternada
+//   0xFFE8EAF0    → context.cores.borda
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Filtros disponíveis no histórico
@@ -36,12 +44,17 @@ extension _FiltroHistoricoExt on _FiltroHistorico {
         _FiltroHistorico.expiradas   => 'EXPIRADA',
       };
 
-  Color get cor => switch (this) {
-        _FiltroHistorico.todas       => _kAzul,
-        _FiltroHistorico.convertidas => _kVerde,
-        _FiltroHistorico.canceladas  => _kVermelho,
-        _FiltroHistorico.expiradas   => _kCinzaTexto,
-      };
+  /// Cor do filtro como TEXTO/ÍCONE (e, com alpha, como fundo translúcido).
+  /// Era um getter; agora é método porque a cor depende do tema.
+  Color cor(BuildContext context) {
+    final c = context.cores;
+    return switch (this) {
+      _FiltroHistorico.todas       => c.marca,
+      _FiltroHistorico.convertidas => c.sucesso,
+      _FiltroHistorico.canceladas  => c.acentoTexto,
+      _FiltroHistorico.expiradas   => c.textoSecundario,
+    };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,12 +68,16 @@ String _labelStatus(String status) => switch (status) {
       _            => status,
     };
 
-Color _corStatus(String status) => switch (status) {
-      'CONVERTIDA' => _kVerde,
-      'CANCELADA'  => _kVermelho,
-      'EXPIRADA'   => _kCinzaTexto,
-      _            => _kCinzaTexto,
-    };
+/// Cor do estado como TEXTO/ÍCONE. Depende do tema, por isso recebe o context.
+Color _corStatus(BuildContext context, String status) {
+  final c = context.cores;
+  return switch (status) {
+    'CONVERTIDA' => c.sucesso,
+    'CANCELADA'  => c.acentoTexto,
+    'EXPIRADA'   => c.textoSecundario,
+    _            => c.textoSecundario,
+  };
+}
 
 String _formatarData(DateTime? data) {
   if (data == null) return '—';
@@ -171,11 +188,14 @@ class _HistoricoCotacoesScreenState extends State<HistoricoCotacoesScreen> {
 
 
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(String mensagem, {bool erro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(mensagem, style: const TextStyle(color: Colors.white)),
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : context.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -186,8 +206,10 @@ class _HistoricoCotacoesScreenState extends State<HistoricoCotacoesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/historico_cotacoes'),
       body: Column(
@@ -203,11 +225,11 @@ class _HistoricoCotacoesScreenState extends State<HistoricoCotacoesScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-         child: _Listagem(
-  aplicarFiltros: _aplicarFiltros,
-  onRecarregar: _recarregar,
-  onSnack: _mostrarSnack,
-),
+            child: _Listagem(
+              aplicarFiltros: _aplicarFiltros,
+              onRecarregar: _recarregar,
+              onSnack: _mostrarSnack,
+            ),
           ),
         ],
       ),
@@ -216,19 +238,21 @@ class _HistoricoCotacoesScreenState extends State<HistoricoCotacoesScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.history_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -269,8 +293,10 @@ class _BarraPesquisa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
@@ -280,21 +306,18 @@ class _BarraPesquisa extends StatelessWidget {
               onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: 'Pesquisar por referência ou cliente...',
-                hintStyle:
-                    const TextStyle(fontSize: 13, color: _kCinzaTexto),
-                prefixIcon:
-                    const Icon(Icons.search_rounded, color: _kAzul),
+                hintStyle: TextStyle(fontSize: 13, color: c.textoSecundario),
+                prefixIcon: Icon(Icons.search_rounded, color: c.marca),
                 suffixIcon: controller.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            color: _kCinzaTexto, size: 18),
+                        icon: Icon(Icons.close_rounded,
+                            color: c.textoSecundario, size: 18),
                         onPressed: onLimpar,
                       )
                     : null,
                 filled: true,
-                fillColor: _kCinzaClaro,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 10),
+                fillColor: c.fundo,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -306,8 +329,7 @@ class _BarraPesquisa extends StatelessWidget {
           Consumer<CotacaoProvider>(
             builder: (_, p, __) => Text(
               '${p.cotacoes.length} registo(s)',
-              style:
-                  const TextStyle(fontSize: 13, color: _kCinzaTexto),
+              style: TextStyle(fontSize: 13, color: c.textoSecundario),
             ),
           ),
         ],
@@ -331,34 +353,37 @@ class _BarraFiltros extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: _FiltroHistorico.values.map((filtro) {
             final ativo = filtro == filtroActivo;
-            final cor   = filtro.cor;
+            final cor   = filtro.cor(context);
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
                 label: Text(filtro.label),
                 selected: ativo,
                 onSelected: (_) => onSelecionar(filtro),
-                selectedColor: cor.withOpacity(0.15),
-                backgroundColor: _kCinzaClaro,
+                selectedColor:
+                    cor.withValues(alpha: context.escuro ? 0.22 : 0.15),
+                backgroundColor: c.fundo,
                 labelStyle: TextStyle(
                   fontSize: 12,
                   fontWeight:
                       ativo ? FontWeight.w700 : FontWeight.normal,
-                  color: ativo ? cor : _kCinzaTexto,
+                  color: ativo ? cor : c.textoSecundario,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(
                     color: ativo
-                        ? cor.withOpacity(0.4)
+                        ? cor.withValues(alpha: 0.4)
                         : Colors.transparent,
                   ),
                 ),
@@ -378,22 +403,22 @@ class _BarraFiltros extends StatelessWidget {
 class _Listagem extends StatelessWidget {
   final List<CotacaoModel> Function(List<CotacaoModel>) aplicarFiltros;
   final Future<void> Function() onRecarregar;
-  
+
   final void Function(String mensagem, {bool erro}) onSnack;
 
-const _Listagem({
-  required this.aplicarFiltros,
-  required this.onRecarregar,
-  required this.onSnack,
-});
+  const _Listagem({
+    required this.aplicarFiltros,
+    required this.onRecarregar,
+    required this.onSnack,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<CotacaoProvider>();
 
     if (provider.isLoading) {
-      return const Center(
-          child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.status == CotacaoStatus.error) {
@@ -401,20 +426,22 @@ const _Listagem({
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _kVermelho, size: 48),
+            Icon(Icons.error_outline, color: c.perigo, size: 48),
             const SizedBox(height: 12),
             Text(
               provider.errorMessage ?? 'Erro ao carregar histórico.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.perigo),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: onRecarregar,
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
+              ),
             ),
           ],
         ),
@@ -424,22 +451,23 @@ const _Listagem({
     final lista = aplicarFiltros(provider.cotacoes);
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.history_toggle_off_rounded,
-                color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+                color: c.textoSecundario, size: 48),
+            const SizedBox(height: 12),
             Text('Nenhum registo encontrado.',
-                style: TextStyle(color: _kCinzaTexto)),
+                style: TextStyle(color: c.textoSecundario)),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
-      color: _kAzul,
+      color: c.marca,
+      backgroundColor: c.superficie,
       onRefresh: onRecarregar,
       child: Column(
         children: [
@@ -448,10 +476,12 @@ const _Listagem({
             margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: _kAzul,
+            decoration: BoxDecoration(
+              color: context.escuro
+                  ? AppColors.azulMarcaEscuro
+                  : AppColors.azulMarca,
               borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(10)),
+                  const BorderRadius.vertical(top: Radius.circular(10)),
             ),
             child: const Row(
               children: [
@@ -497,11 +527,11 @@ const _Listagem({
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
               itemCount: lista.length,
-     itemBuilder: (_, i) => _LinhaHistorico(
-  cotacao: lista[i],
-  isAlternate: i.isOdd,
-  onSnack: onSnack,
-),
+              itemBuilder: (_, i) => _LinhaHistorico(
+                cotacao: lista[i],
+                isAlternate: i.isOdd,
+                onSnack: onSnack,
+              ),
             ),
           ),
         ],
@@ -520,11 +550,11 @@ class _BadgeEstado extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = _corStatus(status);
+    final cor = _corStatus(context, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.10),
+        color: cor.withValues(alpha: context.escuro ? 0.18 : 0.10),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -556,6 +586,10 @@ class _LinhaHistorico extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+    final corEstado = _corStatus(context, cotacao.statusCotacao);
+
     final nomeCliente = cotacao.nomeCliente?.isNotEmpty == true
         ? cotacao.nomeCliente!
         : 'Sem cliente associado';
@@ -564,9 +598,9 @@ class _LinhaHistorico extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0)),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(
+          bottom: BorderSide(color: c.borda),
         ),
       ),
       child: Padding(
@@ -577,7 +611,7 @@ class _LinhaHistorico extends StatelessWidget {
             CircleAvatar(
               radius: 18,
               backgroundColor:
-                  _corStatus(cotacao.statusCotacao).withOpacity(0.12),
+                  corEstado.withValues(alpha: escuro ? 0.18 : 0.12),
               child: Icon(
                 isConvertida
                     ? Icons.task_alt_rounded
@@ -585,7 +619,7 @@ class _LinhaHistorico extends StatelessWidget {
                         ? Icons.cancel_outlined
                         : Icons.timer_off_outlined,
                 size: 18,
-                color: _corStatus(cotacao.statusCotacao),
+                color: corEstado,
               ),
             ),
             const SizedBox(width: 14),
@@ -600,10 +634,10 @@ class _LinhaHistorico extends StatelessWidget {
                     cotacao.referencia,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: _kAzul,
+                      color: c.marca,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -611,14 +645,14 @@ class _LinhaHistorico extends StatelessWidget {
                     nomeCliente,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: _kCinzaTexto),
+                    style: TextStyle(fontSize: 11, color: c.textoSecundario),
                   ),
                   if (isConvertida && cotacao.referenciaPedidoConvertido != null)
                     Text(
                       '→ ${cotacao.referenciaPedidoConvertido}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 10, color: _kVerde),
+                      style: TextStyle(fontSize: 10, color: c.sucesso),
                     ),
                 ],
               ),
@@ -638,10 +672,10 @@ class _LinhaHistorico extends StatelessWidget {
               flex: 2,
               child: Text(
                 _formatarTotal(cotacao.total),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
             ),
@@ -650,12 +684,12 @@ class _LinhaHistorico extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Row(children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 13, color: _kCinzaTexto),
+                Icon(Icons.calendar_today_outlined,
+                    size: 13, color: c.textoSecundario),
                 const SizedBox(width: 4),
                 Text(
                   _formatarData(cotacao.createdAt),
-                  style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                  style: TextStyle(fontSize: 12, color: c.textoSecundario),
                 ),
               ]),
             ),
@@ -677,13 +711,13 @@ class _LinhaHistorico extends StatelessWidget {
                       : Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: _kCinzaClaro,
+                            color: c.fundo,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.picture_as_pdf_outlined,
                             size: 16,
-                            color: _kCinzaTexto,
+                            color: c.textoSecundario,
                           ),
                         ),
                 ),
@@ -734,26 +768,27 @@ class _BotaoPdfHistoricoState extends State<_BotaoPdfHistorico> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return InkWell(
       onTap: _gerarPdf,
       borderRadius: BorderRadius.circular(6),
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: _kVerde.withOpacity(0.08),
+          color: c.sucesso.withValues(alpha: context.escuro ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(6),
         ),
         child: _gerando
-            ? const SizedBox(
+            ? SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: _kVerde,
+                  color: c.sucesso,
                 ),
               )
-            : const Icon(Icons.picture_as_pdf_outlined,
-                size: 16, color: _kVerde),
+            : Icon(Icons.picture_as_pdf_outlined, size: 16, color: c.sucesso),
       ),
     );
   }

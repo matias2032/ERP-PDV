@@ -1,14 +1,22 @@
+// lib/screens/extratos_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'extractos_form_screen.dart';
 
-const _kAzul       = Color(0xFF1B2A6B);
-const _kVermelho   = Color(0xFFC8102E);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão/snackbar info)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: FAB, ícone da AppBar, snackbar de erro)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//   _kBranco     → AppColors.branco
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
 
 class ExtratosListScreen extends StatefulWidget {
   const ExtratosListScreen({super.key});
@@ -29,21 +37,20 @@ class _ExtratosListScreenState extends State<ExtratosListScreen> {
 
   // ── Navegar para o formulário e receber resultado ─────────────────────────
 
-// DEPOIS
-Future<void> _novoExtrato() async {
-  final resultado = await Navigator.push<ExtratoModel>(
-    context,
-    MaterialPageRoute(builder: (_) => const ExtratosFormScreen()),
-  );
-  if (resultado != null && mounted) {
-    setState(() {
-      _historico.insert(
-        0,
-        _ExtratoSessao(extrato: resultado, geradoEm: DateTime.now()),
-      );
-    });
+  Future<void> _novoExtrato() async {
+    final resultado = await Navigator.push<ExtratoModel>(
+      context,
+      MaterialPageRoute(builder: (_) => const ExtratosFormScreen()),
+    );
+    if (resultado != null && mounted) {
+      setState(() {
+        _historico.insert(
+          0,
+          _ExtratoSessao(extrato: resultado, geradoEm: DateTime.now()),
+        );
+      });
+    }
   }
-}
 
   // ── Regerar PDF de um extracto do histórico ───────────────────────────────
 
@@ -63,11 +70,14 @@ Future<void> _novoExtrato() async {
     }
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _snack(String msg, {bool erro = false}) {
     if (!mounted) return;
+    final c = context.cores;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:         Text(msg),
-      backgroundColor: erro ? _kVermelho : _kAzul,
+      content:         Text(msg, style: const TextStyle(color: AppColors.branco)),
+      backgroundColor: erro ? AppColors.vermelhoMarca : c.marcaBotao,
       behavior:        SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ));
@@ -77,8 +87,10 @@ Future<void> _novoExtrato() async {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       drawer: const AppSidebar(currentRoute: '/gerenciar_extractos'),
       appBar: _buildAppBar(),
       body: _historico.isEmpty
@@ -86,8 +98,8 @@ Future<void> _novoExtrato() async {
           : _listaHistorico(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _novoExtrato,
-        backgroundColor: _kVermelho,
-        foregroundColor: _kBranco,
+        backgroundColor: AppColors.vermelhoMarca,
+        foregroundColor: AppColors.branco,
         icon:  const Icon(Icons.add_rounded),
         label: const Text('Novo Extracto',
             style: TextStyle(fontWeight: FontWeight.w600)),
@@ -97,18 +109,20 @@ Future<void> _novoExtrato() async {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation:       0,
       title: Row(children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color:        _kVermelho,
+            color:        AppColors.vermelhoMarca,
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.analytics_outlined,
-              color: _kBranco, size: 20),
+              color: AppColors.branco, size: 20),
         ),
         const SizedBox(width: 10),
         const Text('Extractos',
@@ -119,20 +133,22 @@ Future<void> _novoExtrato() async {
   }
 
   Widget _estadoVazio() {
+    final c = context.cores;
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.analytics_outlined,
-              size: 72, color: Colors.grey.shade300),
+              size: 72, color: c.desactivado),
           const SizedBox(height: 16),
-          const Text('Nenhum extracto gerado nesta sessão.',
+          Text('Nenhum extracto gerado nesta sessão.',
               style: TextStyle(
-                  fontSize: 15, color: _kCinzaTexto)),
+                  fontSize: 15, color: c.textoSecundario)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Clique em "Novo Extracto" para gerar.',
-            style: TextStyle(fontSize: 12, color: _kCinzaTexto),
+            style: TextStyle(fontSize: 12, color: c.textoSecundario),
           ),
         ],
       ),
@@ -185,14 +201,17 @@ class _CardHistorico extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final e = sessao.extrato;
 
     return Card(
       elevation: 0,
+      color: c.superficie,
+      surfaceTintColor: Colors.transparent,
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -203,11 +222,11 @@ class _CardHistorico extends StatelessWidget {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color:        _kAzul.withOpacity(0.08),
+                color: c.marca.withValues(alpha: context.escuro ? 0.16 : 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.analytics_outlined,
-                  color: _kAzul, size: 22),
+              child: Icon(Icons.analytics_outlined,
+                  color: c.marca, size: 22),
             ),
             const SizedBox(width: 12),
 
@@ -217,16 +236,16 @@ class _CardHistorico extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(e.labelPeriodo,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize:   15,
                           fontWeight: FontWeight.w700,
-                          color:      _kAzul)),
+                          color:      c.marca)),
                   const SizedBox(height: 4),
                   Text(
                     '${fmtData.format(e.dataInicio)} → '
                     '${fmtData.format(e.dataFim)}',
-                    style: const TextStyle(
-                        fontSize: 12, color: _kCinzaTexto),
+                    style: TextStyle(
+                        fontSize: 12, color: c.textoSecundario),
                   ),
                   const SizedBox(height: 6),
                   Wrap(spacing: 12, children: [
@@ -237,7 +256,7 @@ class _CardHistorico extends StatelessWidget {
                     _ChipInfo(
                       icon:  Icons.attach_money_rounded,
                       label: fmtMoeda.format(e.somaTotal),
-                      cor:   _kVermelho,
+                      cor:   c.acentoTexto,
                     ),
                     _ChipInfo(
                       icon:  Icons.schedule_rounded,
@@ -254,7 +273,7 @@ class _CardHistorico extends StatelessWidget {
               message: 'Exportar PDF',
               child: IconButton(
                 icon:      const Icon(Icons.picture_as_pdf_rounded),
-                color:     _kAzul,
+                color:     c.marca,
                 iconSize:  24,
                 onPressed: onExportar,
               ),
@@ -269,21 +288,25 @@ class _CardHistorico extends StatelessWidget {
 class _ChipInfo extends StatelessWidget {
   final IconData icon;
   final String   label;
-  final Color    cor;
+
+  /// Se nulo, usa `textoSecundario` do tema (resolvido no build).
+  final Color?   cor;
 
   const _ChipInfo({
     required this.icon,
     required this.label,
-    this.cor = _kCinzaTexto,
+    this.cor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final corFinal = cor ?? context.cores.textoSecundario;
+
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 13, color: cor),
+      Icon(icon, size: 13, color: corFinal),
       const SizedBox(width: 3),
       Text(label,
-          style: TextStyle(fontSize: 11, color: cor)),
+          style: TextStyle(fontSize: 11, color: corFinal)),
     ]);
   }
 }

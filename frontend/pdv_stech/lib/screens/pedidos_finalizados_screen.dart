@@ -5,17 +5,23 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/services/pdf_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'package:http/http.dart' as http;
 import 'package:api_compartilhado/api_config.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 // import 'devolucao_troca_screen.dart';
-// ─── Paleta ──────────────────────────────────────────────────────────────────
-const _kPrimary    = Color(0xFF1B2A6B);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
-const _kSuccess    = Color(0xFF2E7D32);
+
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kPrimary, _kAccent, _kBackground, _kSuccess) foram
+// substituídas pelo tema:
+//   _kPrimary    → context.cores.marca (texto/ícone/borda)
+//                  AppColors.azulMarca / azulMarcaEscuro (fundo do header)
+//                  context.cores.marcaBotao (fundo de botão/snackbar)
+//   _kAccent     → AppColors.vermelhoMarca (fundo, texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//   _kBackground → context.cores.fundo
+//   _kSuccess    → context.cores.sucesso
 
 class PedidosFinalizadosScreen extends StatefulWidget {
   const PedidosFinalizadosScreen({super.key});
@@ -23,7 +29,6 @@ class PedidosFinalizadosScreen extends StatefulWidget {
   @override
   State<PedidosFinalizadosScreen> createState() =>
       _PedidosFinalizadosScreenState();
-      
 }
 
 class _PedidosFinalizadosScreenState extends State<PedidosFinalizadosScreen>
@@ -32,13 +37,9 @@ class _PedidosFinalizadosScreenState extends State<PedidosFinalizadosScreen>
   final _currencyFmt   = NumberFormat.currency(locale: 'pt_PT', symbol: 'MZN');
   final _dateFmt       = DateFormat('dd/MM/yyyy HH:mm');
   final _pdfService = PdfService.instance;
-   final Map<int, String> _tiposPagamento = {};
-
+  final Map<int, String> _tiposPagamento = {};
 
   String            _pesquisa   = '';
-
-
-
 
   final _searchCtrl = TextEditingController();
 
@@ -46,41 +47,39 @@ class _PedidosFinalizadosScreenState extends State<PedidosFinalizadosScreen>
   void initState() {
     super.initState();
 
-
-WidgetsBinding.instance.addPostFrameCallback((_) => _carregar());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _carregar());
   }
 
-@override
-void dispose() {
-
-  _searchCtrl.dispose();
-  super.dispose();
-}
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   // ── Lógica ───────────────────────────────────────────────────────────────
 
-    
-Future<void> _carregar() async {
-  await Future.wait([
-    context.read<PedidoProvider>().listarPorStatus('finalizado'),
-    context.read<PedidoProvider>().carregarTiposPagamento(),
-  ]);
-  if (!mounted) return;
-  final provider = context.read<PedidoProvider>();
-  for (final t in provider.tiposPagamento) {
-    _tiposPagamento[t.idTipoPagamento] = t.tipoPagamento;
+  Future<void> _carregar() async {
+    await Future.wait([
+      context.read<PedidoProvider>().listarPorStatus('finalizado'),
+      context.read<PedidoProvider>().carregarTiposPagamento(),
+    ]);
+    if (!mounted) return;
+    final provider = context.read<PedidoProvider>();
+    for (final t in provider.tiposPagamento) {
+      _tiposPagamento[t.idTipoPagamento] = t.tipoPagamento;
+    }
+    if (provider.errorMessage != null) {
+      _snack('Erro ao carregar pedidos: ${provider.errorMessage}',
+          AppColors.vermelhoMarca);
+    }
   }
-  if (provider.errorMessage != null) {
-    _snack('Erro ao carregar pedidos: ${provider.errorMessage}', _kAccent);
-  }
-}
 
-void _filtrar(String valor) {
-  setState(() {
-    _pesquisa = valor.toLowerCase();
-    // lê directamente do Provider — sem variável local
-  });
-}
+  void _filtrar(String valor) {
+    setState(() {
+      _pesquisa = valor.toLowerCase();
+      // lê directamente do Provider — sem variável local
+    });
+  }
 
   void _snack(String msg, Color cor) {
     if (!mounted) return;
@@ -101,52 +100,57 @@ void _filtrar(String valor) {
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
-@override
-Widget build(BuildContext context) {
-  final provider = context.watch<PedidoProvider>();
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<PedidoProvider>();
+    final c = context.cores;
+    final escuro = context.escuro;
 
-  // Filtragem calculada na hora a partir do Provider
-final filtrados = provider.pedidos.where((p) {
-  final nomeSingular = [
-    p.nomeClienteSingular,
-    p.apelidoClienteSingular,
-  ]
-      .where((v) => v != null && v.trim().isNotEmpty)
-      .join(' ')
-      .toLowerCase();
+    // Filtragem calculada na hora a partir do Provider
+    final filtrados = provider.pedidos.where((p) {
+      final nomeSingular = [
+        p.nomeClienteSingular,
+        p.apelidoClienteSingular,
+      ]
+          .where((v) => v != null && v.trim().isNotEmpty)
+          .join(' ')
+          .toLowerCase();
 
-  return p.referencia.toLowerCase().contains(_pesquisa) ||
-      nomeSingular.contains(_pesquisa) ||
-      _currencyFmt.format(p.total).toLowerCase().contains(_pesquisa);
-}).toList();
+      return p.referencia.toLowerCase().contains(_pesquisa) ||
+          nomeSingular.contains(_pesquisa) ||
+          _currencyFmt.format(p.total).toLowerCase().contains(_pesquisa);
+    }).toList();
 
-  final totalGeral = filtrados.fold(0.0, (acc, p) => acc + p.total);
+    final totalGeral = filtrados.fold(0.0, (acc, p) => acc + p.total);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      // A status bar fica sobre o fundo da tela: ícones escuros no tema claro,
+      // ícones claros no tema escuro.
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: escuro ? Brightness.light : Brightness.dark,
+        statusBarBrightness: escuro ? Brightness.dark : Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: _kBackground,
+        backgroundColor: c.fundo,
         drawer: const AppSidebar(currentRoute: '/pedidos_finalizados'),
         body: SafeArea(
-  child: Column(
-    children: [
-      _buildHeader(),
-      Expanded(
-        child: provider.isLoading && provider.pedidos.isEmpty
-            ? _buildLoading()
-            : Column(
-                children: [
-                  _buildResumo(filtrados, totalGeral),
-                  _buildBarraPesquisa(),
-                  Expanded(child: _buildLista(filtrados)),
-                ],
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: provider.isLoading && provider.pedidos.isEmpty
+                    ? _buildLoading()
+                    : Column(
+                        children: [
+                          _buildResumo(filtrados, totalGeral),
+                          _buildBarraPesquisa(),
+                          Expanded(child: _buildLista(filtrados)),
+                        ],
+                      ),
               ),
-      ),
-    ],
-  ),
-),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -155,7 +159,8 @@ final filtrados = provider.pedidos.where((p) {
 
   Widget _buildHeader() {
     return Container(
-      color: _kPrimary,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      color: context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       child: Row(
         children: [
@@ -165,7 +170,7 @@ final filtrados = provider.pedidos.where((p) {
               child: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.menu_rounded, color: Colors.white, size: 18),
@@ -207,17 +212,18 @@ final filtrados = provider.pedidos.where((p) {
   // ── Loading ───────────────────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    return const Center(
+    final c = context.cores;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: 28, height: 28,
-            child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2.5),
+            child: CircularProgressIndicator(color: c.marca, strokeWidth: 2.5),
           ),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           Text('A carregar pedidos…',
-              style: TextStyle(fontSize: 13, color: Colors.grey)),
+              style: TextStyle(fontSize: 13, color: c.textoSecundario)),
         ],
       ),
     );
@@ -225,7 +231,8 @@ final filtrados = provider.pedidos.where((p) {
 
   // ── Resumo ────────────────────────────────────────────────────────────────
 
-Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
+  Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
@@ -234,8 +241,8 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
             child: _ResumoCard(
               icone: Icons.receipt_long_outlined,
               label: 'Total de pedidos',
-  valor: '${filtrados.length}',
-              cor: _kPrimary,
+              valor: '${filtrados.length}',
+              cor: c.marca,
             ),
           ),
           const SizedBox(width: 12),
@@ -243,8 +250,8 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
             child: _ResumoCard(
               icone: Icons.payments_outlined,
               label: 'Valor total',
-  valor: _currencyFmt.format(totalGeral), 
-              cor: _kSuccess,
+              valor: _currencyFmt.format(totalGeral),
+              cor: c.sucesso,
             ),
           ),
         ],
@@ -255,6 +262,7 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
   // ── Barra de pesquisa ─────────────────────────────────────────────────────
 
   Widget _buildBarraPesquisa() {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: TextField(
@@ -262,11 +270,11 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
         onChanged: _filtrar,
         decoration: InputDecoration(
           hintText: 'Pesquisar por referência…',
-          hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-          prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+          hintStyle: TextStyle(fontSize: 13, color: c.textoSecundario),
+          prefixIcon: Icon(Icons.search, color: c.textoSecundario, size: 20),
           suffixIcon: _pesquisa.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                  icon: Icon(Icons.close, size: 18, color: c.textoSecundario),
                   onPressed: () {
                     _searchCtrl.clear();
                     _filtrar('');
@@ -274,7 +282,7 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
                 )
               : null,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: c.superficie,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -287,24 +295,25 @@ Widget _buildResumo(List<PedidoModel> filtrados, double totalGeral) {
 
   // ── Lista ─────────────────────────────────────────────────────────────────
 
-Widget _buildLista(List<PedidoModel> filtrados) {
-  if (filtrados.isEmpty) return _buildListaVazia(); 
+  Widget _buildLista(List<PedidoModel> filtrados) {
+    if (filtrados.isEmpty) return _buildListaVazia();
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-itemCount: filtrados.length,       
+      itemCount: filtrados.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
-itemBuilder: (_, i) => _PedidoCard(
-      pedido: filtrados[i],    
-  currencyFmt: _currencyFmt,
-  dateFmt: _dateFmt,
-  tipoPagamento: _tiposPagamento[filtrados[i].idTipoPagamento] ?? 'Desconhecido',
-  pdfService: _pdfService,
-),
+      itemBuilder: (_, i) => _PedidoCard(
+        pedido: filtrados[i],
+        currencyFmt: _currencyFmt,
+        dateFmt: _dateFmt,
+        tipoPagamento: _tiposPagamento[filtrados[i].idTipoPagamento] ?? 'Desconhecido',
+        pdfService: _pdfService,
+      ),
     );
   }
 
   Widget _buildListaVazia() {
+    final c = context.cores;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -312,21 +321,23 @@ itemBuilder: (_, i) => _PedidoCard(
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: c.borda,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.inbox_outlined, color: Colors.grey, size: 32),
+            child: Icon(Icons.inbox_outlined, color: c.desactivado, size: 32),
           ),
           const SizedBox(height: 16),
-          const Text('Nenhum pedido encontrado',
+          Text('Nenhum pedido encontrado',
               style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: c.textoPrincipal)),
           const SizedBox(height: 6),
           Text(
             _pesquisa.isNotEmpty
                 ? 'Tente outro termo de pesquisa'
                 : 'Ainda não há pedidos finalizados',
-            style: const TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(fontSize: 13, color: c.textoSecundario),
           ),
         ],
       ),
@@ -357,9 +368,9 @@ class _PedidoCard extends StatefulWidget {
 
 class _PedidoCardState extends State<_PedidoCard> {
   bool _expandido = false;
-    bool _imprimindo = false;
-  ClienteModel? _cliente;            // ← aqui
-  bool _carregandoCliente = false;   // ← aqui
+  bool _imprimindo = false;
+  ClienteModel? _cliente;
+  bool _carregandoCliente = false;
   // DocumentoFiscalModel? _documentoDevolucao;
   // bool _verificandoDocumento = false;
 
@@ -373,18 +384,18 @@ class _PedidoCardState extends State<_PedidoCard> {
   PedidoModel get p => widget.pedido;
 
   String get _nomeClienteSingular {
-  return [
-    p.nomeClienteSingular,
-    p.apelidoClienteSingular,
-  ]
-      .where((v) => v != null && v.trim().isNotEmpty)
-      .join(' ')
-      .trim();
-}
+    return [
+      p.nomeClienteSingular,
+      p.apelidoClienteSingular,
+    ]
+        .where((v) => v != null && v.trim().isNotEmpty)
+        .join(' ')
+        .trim();
+  }
 
-bool get _temClienteSingular => _nomeClienteSingular.isNotEmpty;
+  bool get _temClienteSingular => _nomeClienteSingular.isNotEmpty;
 
-// ← aqui — usa p que é getter local
+  // usa p que é getter local
   Future<void> _carregarCliente() async {
     if (_cliente != null || p.idCliente == null) return;
     setState(() => _carregandoCliente = true);
@@ -458,302 +469,300 @@ bool get _temClienteSingular => _nomeClienteSingular.isNotEmpty;
   //   }
   // }
 
-Future<TipoDocumentoModel?> _selecionarTipoDocumento(BuildContext context) async {
-  final provider = context.read<DocumentoFiscalProvider>();
+  Future<TipoDocumentoModel?> _selecionarTipoDocumento(BuildContext context) async {
+    final provider = context.read<DocumentoFiscalProvider>();
 
-  if (provider.tipos.isEmpty) {
-    await provider.carregarTipos();
-  }
-
-  if (!context.mounted) return null;
-
-  // Notas de Crédito/Débito têm fluxo próprio (ligadas a uma factura de
-  // origem) e nunca devem aparecer como opção de emissão directa a partir
-  // de um pedido.
-  final tipos = provider.tipos
-      .where((t) => t.codigo != 'NCR' && t.codigo != 'NDB')
-      .toList();
-
-  if (tipos.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Nenhum tipo de documento fiscal disponível.'),
-        backgroundColor: _kAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-    return null;
-  }
-
-  return showModalBottomSheet<TipoDocumentoModel>(
-    context: context,
-    backgroundColor: Colors.white,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-    ),
-    builder: (ctx) {
-      final alturaMaxima = MediaQuery.of(ctx).size.height * 0.75;
-
-      return SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: alturaMaxima),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Escolha o documento fiscal',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: _kPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    children:
-                        tipos.map((tipo) => _opcaoDocumento(ctx, tipo)).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-
-
-Widget _opcaoDocumento(BuildContext context, TipoDocumentoModel tipo) {
-  return InkWell(
-    onTap: () => Navigator.pop(context, tipo),
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: _kPrimary.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kPrimary.withOpacity(0.10)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: _kPrimary.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              _iconeDocumento(tipo.codigo),
-              color: _kPrimary,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tipo.nome,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _kPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  tipo.prefixo,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        ],
-      ),
-    ),
-  );
-}
-
-IconData _iconeDocumento(String codigo) {
-  return switch (codigo) {
-    'FAT' => Icons.receipt_long_rounded,
-    'REC' => Icons.payments_rounded,
-    'NE' => Icons.note_alt_rounded,
-    'VD' => Icons.point_of_sale_rounded,
-    _ => Icons.description_rounded,
-  };
-}
-
-ClienteModel _clientePdfFallback() {
-  if (_temClienteSingular) {
-    return ClienteModel(
-      id: 0,
-      nome: p.nomeClienteSingular?.trim().isNotEmpty == true
-          ? p.nomeClienteSingular!.trim()
-          : 'Cliente',
-      apelido: p.apelidoClienteSingular?.trim().isNotEmpty == true
-          ? p.apelidoClienteSingular!.trim()
-          : '',
-      idPerfil: 1,
-      nomePerfil: 'Cliente singular',
-    );
-  }
-
-  return ClienteModel(
-    id: p.idCliente ?? 0,
-    nome: p.idCliente != null ? 'Cliente #${p.idCliente}' : 'Cliente',
-    apelido: p.idCliente != null ? '' : 'Avulso',
-    idPerfil: 1,
-    nomePerfil: 'Sem perfil',
-  );
-}
-
-
-
-Future<void> _imprimir(BuildContext context) async {
-  if (_imprimindo) return;
-
-  final tipoDoc = await _selecionarTipoDocumento(context);
-  if (tipoDoc == null) return;
-
-  setState(() => _imprimindo = true);
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: const [
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(width: 12),
-          Text('A emitir documento fiscal…'),
-        ],
-      ),
-      backgroundColor: _kPrimary,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 30),
-    ),
-  );
-
-  try {
-    final docProvider = context.read<DocumentoFiscalProvider>();
-
-    final idUsuario = SessaoService.instance.idUsuario;
-    if (idUsuario == 0) {
-      throw Exception('Sessão inválida. Faça login novamente.');
+    if (provider.tipos.isEmpty) {
+      await provider.carregarTipos();
     }
 
-    final apiDoc = await docProvider.emitirMultiplos(
-      idsPedido: [p.idPedido],
-      codigoTipo: tipoDoc.codigo,
-      idUsuario: idUsuario,
-      codigoAt: FiscalConstants.codigoAT,
-    );
+    if (!context.mounted) return null;
 
-    if (apiDoc == null) {
-      throw Exception(docProvider.erro ?? 'Não foi possível emitir o documento.');
-    }
+    // Notas de Crédito/Débito têm fluxo próprio (ligadas a uma factura de
+    // origem) e nunca devem aparecer como opção de emissão directa a partir
+    // de um pedido.
+    final tipos = provider.tipos
+        .where((t) => t.codigo != 'NCR' && t.codigo != 'NDB')
+        .toList();
 
-    ClienteModel? cliente;
-
-    if (p.idCliente != null) {
-      if (_cliente == null) {
-        await _carregarCliente();
-      }
-      cliente = _cliente;
-    }
-
-    cliente ??= _clientePdfFallback();
-
-    final pdfDoc = DocumentoPdfModel.deApiModelMultiplos(
-      apiModel: apiDoc,
-      pedidos: [p],
-      cliente: cliente,
-      tipoPagamento: widget.tipoPagamento,
-    );
-
-    final file = await widget.pdfService.gerarDocumentoFiscal(pdfDoc);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-    }
-
-    await widget.pdfService.abrirPdf(file);
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
+    if (tipos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao gerar documento fiscal: $e'),
-          backgroundColor: _kAccent,
+          content: const Text('Nenhum tipo de documento fiscal disponível.'),
+          backgroundColor: AppColors.vermelhoMarca,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+      return null;
     }
-  } finally {
-    if (mounted) setState(() => _imprimindo = false);
+
+    return showModalBottomSheet<TipoDocumentoModel>(
+      context: context,
+      backgroundColor: context.cores.superficie,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        final c = ctx.cores;
+        final alturaMaxima = MediaQuery.of(ctx).size.height * 0.75;
+
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: alturaMaxima),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: c.desactivado,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Escolha o documento fiscal',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: c.marca,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      children:
+                          tipos.map((tipo) => _opcaoDocumento(ctx, tipo)).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
-}
-  
+
+  Widget _opcaoDocumento(BuildContext context, TipoDocumentoModel tipo) {
+    final c = context.cores;
+    return InkWell(
+      onTap: () => Navigator.pop(context, tipo),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: c.marca.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.marca.withValues(alpha: 0.10)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: c.marca.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _iconeDocumento(tipo.codigo),
+                color: c.marca,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tipo.nome,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: c.marca,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    tipo.prefixo,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: c.textoSecundario,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: c.textoSecundario),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconeDocumento(String codigo) {
+    return switch (codigo) {
+      'FAT' => Icons.receipt_long_rounded,
+      'REC' => Icons.payments_rounded,
+      'NE' => Icons.note_alt_rounded,
+      'VD' => Icons.point_of_sale_rounded,
+      _ => Icons.description_rounded,
+    };
+  }
+
+  ClienteModel _clientePdfFallback() {
+    if (_temClienteSingular) {
+      return ClienteModel(
+        id: 0,
+        nome: p.nomeClienteSingular?.trim().isNotEmpty == true
+            ? p.nomeClienteSingular!.trim()
+            : 'Cliente',
+        apelido: p.apelidoClienteSingular?.trim().isNotEmpty == true
+            ? p.apelidoClienteSingular!.trim()
+            : '',
+        idPerfil: 1,
+        nomePerfil: 'Cliente singular',
+      );
+    }
+
+    return ClienteModel(
+      id: p.idCliente ?? 0,
+      nome: p.idCliente != null ? 'Cliente #${p.idCliente}' : 'Cliente',
+      apelido: p.idCliente != null ? '' : 'Avulso',
+      idPerfil: 1,
+      nomePerfil: 'Sem perfil',
+    );
+  }
+
+  Future<void> _imprimir(BuildContext context) async {
+    if (_imprimindo) return;
+
+    final tipoDoc = await _selecionarTipoDocumento(context);
+    if (tipoDoc == null) return;
+
+    setState(() => _imprimindo = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: const [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('A emitir documento fiscal…'),
+          ],
+        ),
+        backgroundColor: context.cores.marcaBotao,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 30),
+      ),
+    );
+
+    try {
+      final docProvider = context.read<DocumentoFiscalProvider>();
+
+      final idUsuario = SessaoService.instance.idUsuario;
+      if (idUsuario == 0) {
+        throw Exception('Sessão inválida. Faça login novamente.');
+      }
+
+      final apiDoc = await docProvider.emitirMultiplos(
+        idsPedido: [p.idPedido],
+        codigoTipo: tipoDoc.codigo,
+        idUsuario: idUsuario,
+        codigoAt: FiscalConstants.codigoAT,
+      );
+
+      if (apiDoc == null) {
+        throw Exception(docProvider.erro ?? 'Não foi possível emitir o documento.');
+      }
+
+      ClienteModel? cliente;
+
+      if (p.idCliente != null) {
+        if (_cliente == null) {
+          await _carregarCliente();
+        }
+        cliente = _cliente;
+      }
+
+      cliente ??= _clientePdfFallback();
+
+      final pdfDoc = DocumentoPdfModel.deApiModelMultiplos(
+        apiModel: apiDoc,
+        pedidos: [p],
+        cliente: cliente,
+        tipoPagamento: widget.tipoPagamento,
+      );
+
+      final file = await widget.pdfService.gerarDocumentoFiscal(pdfDoc);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+      }
+
+      await widget.pdfService.abrirPdf(file);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao gerar documento fiscal: $e'),
+            backgroundColor: AppColors.vermelhoMarca,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _imprimindo = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           color: _expandido
-              ? _kPrimary.withOpacity(0.35)
-              : Colors.grey[200]!,
+              ? c.marca.withValues(alpha: 0.35)
+              : c.borda,
         ),
       ),
       child: Column(
         children: [
           // ── Cabeçalho sempre visível ──
-InkWell(
-  onTap: () {
-    setState(() => _expandido = !_expandido);
-    if (_expandido) _carregarCliente(); // carrega ao abrir
-  },
-  borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          InkWell(
+            onTap: () {
+              setState(() => _expandido = !_expandido);
+              if (_expandido) _carregarCliente(); // carrega ao abrir
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -762,11 +771,11 @@ InkWell(
                   Container(
                     width: 42, height: 42,
                     decoration: BoxDecoration(
-                      color: _kSuccess.withOpacity(0.1),
+                      color: c.sucesso.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(11),
                     ),
-                    child: const Icon(Icons.check_circle_outline_rounded,
-                        color: _kSuccess, size: 22),
+                    child: Icon(Icons.check_circle_outline_rounded,
+                        color: c.sucesso, size: 22),
                   ),
                   const SizedBox(width: 12),
                   // Referência + data
@@ -776,18 +785,18 @@ InkWell(
                       children: [
                         Text(
                           p.referencia,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
-                            color: _kPrimary,
+                            color: c.marca,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           widget.dateFmt.format(
                               p.dataFinalizacao ?? p.dataPedido),
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey),
+                          style: TextStyle(
+                              fontSize: 12, color: c.textoSecundario),
                         ),
                       ],
                     ),
@@ -798,10 +807,10 @@ InkWell(
                     children: [
                       Text(
                         widget.currencyFmt.format(p.total),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
-                          color: _kPrimary,
+                          color: c.marca,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -809,31 +818,31 @@ InkWell(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _kSuccess.withOpacity(0.1),
+                          color: c.sucesso.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text(
+                        child: Text(
                           'FINALIZADO',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
-                            color: _kSuccess,
+                            color: c.sucesso,
                             letterSpacing: 0.6,
                           ),
                         ),
                       ),
                     ],
                   ),
-const SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   _imprimindo
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20, height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: _kPrimary))
+                              strokeWidth: 2, color: c.marca))
                       : IconButton(
-                          icon: const Icon(Icons.print_outlined,
-                              color: _kPrimary, size: 20),
-                     tooltip: 'Gerar documento fiscal',
+                          icon: Icon(Icons.print_outlined,
+                              color: c.marca, size: 20),
+                          tooltip: 'Gerar documento fiscal',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () => _imprimir(context),
@@ -841,8 +850,8 @@ const SizedBox(width: 4),
                   // if (_documentoDevolucao != null) ...[
                   //   const SizedBox(width: 4),
                   //   IconButton(
-                  //     icon: const Icon(Icons.assignment_return_outlined,
-                  //         color: _kAccent, size: 20),
+                  //     icon: Icon(Icons.assignment_return_outlined,
+                  //         color: c.acentoTexto, size: 20),
                   //     tooltip: 'Devolver',
                   //     padding: EdgeInsets.zero,
                   //     constraints: const BoxConstraints(),
@@ -853,8 +862,8 @@ const SizedBox(width: 4),
                   AnimatedRotation(
                     turns: _expandido ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.expand_more,
-                        color: Colors.grey, size: 20),
+                    child: Icon(Icons.expand_more,
+                        color: c.textoSecundario, size: 20),
                   ),
                 ],
               ),
@@ -873,15 +882,15 @@ const SizedBox(width: 4),
   }
 
   Widget _buildDetalhe() {
+    final c = context.cores;
 
-    
     return Container(
       decoration: BoxDecoration(
-        color: _kPrimary.withOpacity(0.03),
+        color: c.marca.withValues(alpha: 0.04),
         borderRadius: const BorderRadius.vertical(
             bottom: Radius.circular(14)),
         border: Border(
-            top: BorderSide(color: Colors.grey[200]!)),
+            top: BorderSide(color: c.borda)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
@@ -889,128 +898,129 @@ const SizedBox(width: 4),
         children: [
 
           // ── Cliente ──────────────────────────────────────────────────
-// ── Cliente ──────────────────────────────────────────────────
-if (p.idCliente != null || _temClienteSingular) ...[
-  _labelSeccao(
-    'Cliente',
-    p.idCliente != null ? Icons.business_outlined : Icons.person_outline,
-  ),
-  const SizedBox(height: 6),
-
-  if (p.idCliente != null) ...[
-    _carregandoCliente
-        ? const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: SizedBox(
-              height: 16,
-              width: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _kPrimary,
-              ),
+          if (p.idCliente != null || _temClienteSingular) ...[
+            _labelSeccao(
+              'Cliente',
+              p.idCliente != null ? Icons.business_outlined : Icons.person_outline,
             ),
-          )
-        : _cliente == null
-            ? Text(
-                'ID: ${p.idCliente}',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              )
-            : Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
+            const SizedBox(height: 6),
+
+            if (p.idCliente != null) ...[
+              _carregandoCliente
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: c.marca,
+                        ),
+                      ),
+                    )
+                  : _cliente == null
+                      ? Text(
+                          'ID: ${p.idCliente}',
+                          style: TextStyle(
+                              fontSize: 13, color: c.textoSecundario),
+                        )
+                      : Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: c.marca.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: c.marca.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.business_rounded,
+                                size: 15,
+                                color: c.marca,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _cliente!.nomeCompleto,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: c.marca,
+                                      ),
+                                    ),
+                                    if (_cliente!.contacto != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _cliente!.contacto!,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: c.textoSecundario,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.04),
+                  color: c.marca.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _kPrimary.withOpacity(0.12),
-                  ),
+                  border: Border.all(color: c.marca.withValues(alpha: 0.12)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.business_rounded,
+                    Icon(
+                      Icons.person_rounded,
                       size: 15,
-                      color: _kPrimary,
+                      color: c.marca,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _cliente!.nomeCompleto,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _kPrimary,
-                            ),
-                          ),
-                          if (_cliente!.contacto != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              _cliente!.contacto!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ],
+                      child: Text(
+                        _nomeClienteSingular,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: c.marca,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: c.textoSecundario.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Singular',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: c.textoSecundario,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-  ] else ...[
-    Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: _kPrimary.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _kPrimary.withOpacity(0.12)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.person_rounded,
-            size: 15,
-            color: _kPrimary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _nomeClienteSingular,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _kPrimary,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Text(
-              'Singular',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  ],
+            ],
 
-  const SizedBox(height: 10),
-],
+            const SizedBox(height: 10),
+          ],
+
           // Itens de produto
           if (p.itensProduto.isNotEmpty) ...[
             _labelSeccao('Produtos', Icons.inventory_2_outlined),
@@ -1036,7 +1046,7 @@ if (p.idCliente != null || _temClienteSingular) ...[
             const SizedBox(height: 4),
             _infoRow('Troco',
                 widget.currencyFmt.format(p.troco!),
-                cor: _kSuccess),
+                cor: c.sucesso),
           ],
           const SizedBox(height: 4),
           _infoRow('Total',
@@ -1051,21 +1061,23 @@ if (p.idCliente != null || _temClienteSingular) ...[
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: c.superficieAlt,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(color: c.borda),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.notes_outlined,
-                      size: 15, color: Colors.grey),
+                  Icon(Icons.notes_outlined,
+                      size: 15, color: c.textoSecundario),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       p.observacoes!,
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.black54, height: 1.4),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: c.textoSecundario,
+                          height: 1.4),
                     ),
                   ),
                 ],
@@ -1078,6 +1090,7 @@ if (p.idCliente != null || _temClienteSingular) ...[
   }
 
   Widget _buildItemProduto(ItemPedidoModel item) {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -1085,30 +1098,30 @@ if (p.idCliente != null || _temClienteSingular) ...[
           Container(
             width: 22, height: 22,
             decoration: BoxDecoration(
-              color: _kPrimary.withOpacity(0.08),
+              color: c.marca.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Center(
               child: Text(
                 '${item.quantidade}×',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
-                    color: _kPrimary),
+                    color: c.marca),
               ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(item.nomeProduto,
-                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                style: TextStyle(fontSize: 13, color: c.textoPrincipal)),
           ),
           Text(
             widget.currencyFmt.format(item.subtotal),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87),
+                color: c.textoPrincipal),
           ),
         ],
       ),
@@ -1116,6 +1129,7 @@ if (p.idCliente != null || _temClienteSingular) ...[
   }
 
   Widget _buildItemServico(ItemPedidoServicoModel item) {
+    final c = context.cores;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -1123,16 +1137,16 @@ if (p.idCliente != null || _temClienteSingular) ...[
           Container(
             width: 22, height: 22,
             decoration: BoxDecoration(
-              color: _kAccent.withOpacity(0.08),
+              color: c.acentoTexto.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Center(
               child: Text(
                 '${item.quantidade}×',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
-                    color: _kAccent),
+                    color: c.acentoTexto),
               ),
             ),
           ),
@@ -1140,15 +1154,15 @@ if (p.idCliente != null || _temClienteSingular) ...[
           Expanded(
             child: Text(
               item.nomeServico ?? 'Serviço',
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
+              style: TextStyle(fontSize: 13, color: c.textoPrincipal),
             ),
           ),
           Text(
             widget.currencyFmt.format(item.subtotal),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87),
+                color: c.textoPrincipal),
           ),
         ],
       ),
@@ -1156,15 +1170,16 @@ if (p.idCliente != null || _temClienteSingular) ...[
   }
 
   Widget _labelSeccao(String texto, IconData icon) {
+    final c = context.cores;
     return Row(children: [
-      Icon(icon, size: 13, color: _kPrimary.withOpacity(0.6)),
+      Icon(icon, size: 13, color: c.marca.withValues(alpha: 0.7)),
       const SizedBox(width: 5),
       Text(
         texto.toUpperCase(),
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
-          color: _kPrimary.withOpacity(0.6),
+          color: c.marca.withValues(alpha: 0.7),
           letterSpacing: 0.8,
         ),
       ),
@@ -1173,19 +1188,20 @@ if (p.idCliente != null || _temClienteSingular) ...[
 
   Widget _infoRow(String label, String valor,
       {bool negrito = false, Color? cor}) {
+    final c = context.cores;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
             style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey[600])),
+                color: c.textoSecundario)),
         Text(
           valor,
           style: TextStyle(
             fontSize: negrito ? 15 : 13,
             fontWeight: negrito ? FontWeight.w800 : FontWeight.w500,
-            color: cor ?? (negrito ? _kPrimary : Colors.black87),
+            color: cor ?? (negrito ? c.marca : c.textoPrincipal),
           ),
         ),
       ],
@@ -1212,12 +1228,13 @@ class _ResumoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: cor.withOpacity(0.2)),
+        side: BorderSide(color: cor.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -1226,7 +1243,7 @@ class _ResumoCard extends StatelessWidget {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: cor.withOpacity(0.1),
+                color: cor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: cor, size: 18),
@@ -1237,8 +1254,8 @@ class _ResumoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
+                      style: TextStyle(
+                          fontSize: 11, color: c.textoSecundario)),
                   const SizedBox(height: 2),
                   Text(valor,
                       style: TextStyle(
@@ -1281,9 +1298,9 @@ class _HeaderIconButton extends StatelessWidget {
         child: Container(
           width: 40, height: 40,
           decoration: BoxDecoration(
-            color: cor.withOpacity(0.15),
+            color: cor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cor.withOpacity(0.3)),
+            border: Border.all(color: cor.withValues(alpha: 0.3)),
           ),
           child: Icon(icon, color: cor, size: 18),
         ),

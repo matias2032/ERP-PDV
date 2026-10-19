@@ -5,14 +5,22 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:api_compartilhado/services/pdf_service.dart';
+import '../theme/app_theme.dart';
 import 'devolucao_troca_screen.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ── Cores ─────────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão / snackbar informativa)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo), context.cores.acentoTexto
+//                  (texto/ícone), context.cores.perigo (mensagens de erro)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho) / context.cores.superficie (cards)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   Colors.green → context.cores.sucesso | Colors.orange → context.cores.aviso
+//   Divisórias/bordas (0xFFE5E7EB) → context.cores.borda
 
 class DetalhesPedidoCreditoScreen extends StatefulWidget {
   final PedidoModel pedido;
@@ -38,7 +46,14 @@ class _DetalhesPedidoCreditoScreenState
   bool _operacaoEmAndamento = false;
   String? _erroLocal;
   ClienteModel? _cliente;
-bool _carregandoCliente = false;
+  bool _carregandoCliente = false;
+
+  // Cores FIXAS das snackbars (fundo coloreado + texto branco, iguais nos
+  // dois temas — ver _snack).
+  Color get _corSucesso => Colors.green[700]!;
+  Color get _corAviso => Colors.orange[800]!;
+  Color get _corErro => AppColors.vermelhoMarca;
+  Color get _corInfo => context.cores.marcaBotao;
 
   @override
   void initState() {
@@ -61,15 +76,15 @@ bool _carregandoCliente = false;
     try {
       final provider = context.read<PedidoProvider>();
 
-await provider.carregarTiposPagamento();
+      await provider.carregarTiposPagamento();
 
-// Parcelas desactivadas por enquanto.
-// await provider.carregarParcelas(_pedido.idPedido);
+      // Parcelas desactivadas por enquanto.
+      // await provider.carregarParcelas(_pedido.idPedido);
 
-await provider.carregarPagamentosCredito(_pedido.idPedido);
+      await provider.carregarPagamentosCredito(_pedido.idPedido);
 
-_sincronizarPedidoDoProvider();
-await _carregarCliente();
+      _sincronizarPedidoDoProvider();
+      await _carregarCliente();
     } catch (e) {
       _erroLocal = e.toString();
     } finally {
@@ -100,34 +115,32 @@ await _carregarCliente();
     }
   }
 
-Future<void> _carregarCliente() async {
-  if (_cliente != null || _pedido.idCliente == null) return;
-
-  if (mounted) {
-    setState(() => _carregandoCliente = true);
-  }
-
-  try {
-    final service = ClienteService(
-      baseUrl: ApiConfig.baseUrl,
-      httpClient: http.Client(),
-    );
-
-    final cliente = await service.buscarPorId(_pedido.idCliente!);
+  Future<void> _carregarCliente() async {
+    if (_cliente != null || _pedido.idCliente == null) return;
 
     if (mounted) {
-      setState(() => _cliente = cliente);
+      setState(() => _carregandoCliente = true);
     }
-  } catch (_) {
-    // silencioso — mantém fallback para ID
-  } finally {
-    if (mounted) {
-      setState(() => _carregandoCliente = false);
+
+    try {
+      final service = ClienteService(
+        baseUrl: ApiConfig.baseUrl,
+        httpClient: http.Client(),
+      );
+
+      final cliente = await service.buscarPorId(_pedido.idCliente!);
+
+      if (mounted) {
+        setState(() => _cliente = cliente);
+      }
+    } catch (_) {
+      // silencioso — mantém fallback para ID
+    } finally {
+      if (mounted) {
+        setState(() => _carregandoCliente = false);
+      }
     }
   }
-}
-
-
 
   double _totalPagoEfetivo(List<PagamentoCreditoModel> pagamentos) {
     final somaPagamentos = pagamentos.fold<double>(
@@ -177,7 +190,7 @@ Future<void> _carregarCliente() async {
     if (_operacaoEmAndamento) return;
 
     if (saldoAtual <= 0) {
-      _snack('Esta dívida já está liquidada.', Colors.green);
+      _snack('Esta dívida já está liquidada.', _corSucesso);
       return;
     }
 
@@ -189,13 +202,13 @@ Future<void> _carregarCliente() async {
 
     final tiposPagamento = provider.tiposPagamento;
     if (tiposPagamento.isEmpty) {
-      _snack('Nenhum método de pagamento disponível.', _kVermelho);
+      _snack('Nenhum método de pagamento disponível.', _corErro);
       return;
     }
 
     int? idTipoPagamento = tiposPagamento.first.idTipoPagamento;
-// Parcelas desactivadas por enquanto.
-// ParcelaCreditoModel? parcelaSelecionada = _proximaParcelaPendente(parcelas);
+    // Parcelas desactivadas por enquanto.
+    // ParcelaCreditoModel? parcelaSelecionada = _proximaParcelaPendente(parcelas);
 
     final valorCtrl = TextEditingController();
     final obsCtrl = TextEditingController();
@@ -207,6 +220,7 @@ Future<void> _carregarCliente() async {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            final c = ctx.cores;
             final valor = double.tryParse(
                   valorCtrl.text.replaceAll(',', '.'),
                 ) ??
@@ -216,10 +230,10 @@ Future<void> _carregarCliente() async {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              title: const Text(
+              title: Text(
                 'Registar pagamento',
                 style: TextStyle(
-                  color: _kAzul,
+                  color: c.marca,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -233,7 +247,7 @@ Future<void> _carregarCliente() async {
                         icon: Icons.account_balance_wallet_outlined,
                         texto:
                             'Saldo actual: ${_currencyFmt.format(saldoAtual)}',
-                        cor: _kAzul,
+                        cor: c.marca,
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -301,14 +315,14 @@ Future<void> _carregarCliente() async {
                         icon: Icons.receipt_long_outlined,
                         texto:
                             'Será gerado um recibo associado à factura principal da dívida.',
-                        cor: Colors.green,
+                        cor: c.sucesso,
                       ),
                       if (erro != null) ...[
                         const SizedBox(height: 10),
                         _DialogInfoBox(
                           icon: Icons.warning_amber_rounded,
                           texto: erro!,
-                          cor: _kVermelho,
+                          cor: c.perigo,
                         ),
                       ],
                       if (valor > saldoAtual) ...[
@@ -317,7 +331,7 @@ Future<void> _carregarCliente() async {
                           icon: Icons.info_outline,
                           texto:
                               'O valor informado excede o saldo actual. Ajuste antes de confirmar.',
-                          cor: Colors.orange,
+                          cor: c.aviso,
                         ),
                       ],
                     ],
@@ -327,9 +341,9 @@ Future<void> _carregarCliente() async {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text(
+                  child: Text(
                     'Cancelar',
-                    style: TextStyle(color: _kCinzaTexto),
+                    style: TextStyle(color: c.textoSecundario),
                   ),
                 ),
                 ElevatedButton.icon(
@@ -365,8 +379,8 @@ Future<void> _carregarCliente() async {
                   icon: const Icon(Icons.check_rounded),
                   label: const Text('Confirmar pagamento'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kAzul,
-                    foregroundColor: _kBranco,
+                    backgroundColor: c.marcaBotao,
+                    foregroundColor: AppColors.branco,
                   ),
                 ),
               ],
@@ -398,23 +412,23 @@ Future<void> _carregarCliente() async {
       final result = await provider.registarPagamentoCredito(
         _pedido.idPedido,
         RegistarPagamentoCreditoRequestModel(
-       idParcela: null, // Parcelas desactivadas por enquanto.
-idTipoPagamento: idTipoPagamento!,
-idUsuario: SessaoService.instance.idUsuario,
-valorPago: valorPago,
-observacoes: observacoes ?? 'Pagamento parcial da dívida',
+          idParcela: null, // Parcelas desactivadas por enquanto.
+          idTipoPagamento: idTipoPagamento!,
+          idUsuario: SessaoService.instance.idUsuario,
+          valorPago: valorPago,
+          observacoes: observacoes ?? 'Pagamento parcial da dívida',
         ),
       );
 
       if (!mounted) return;
 
       if (result != null && provider.errorMessage == null) {
-        _snack('Pagamento registado com sucesso.', Colors.green);
+        _snack('Pagamento registado com sucesso.', _corSucesso);
         await _carregar();
       } else {
         _snack(
           provider.errorMessage ?? 'Não foi possível registar o pagamento.',
-          _kVermelho,
+          _corErro,
         );
       }
     } finally {
@@ -423,234 +437,232 @@ observacoes: observacoes ?? 'Pagamento parcial da dívida',
   }
 
   Future<DocumentoFiscalModel> _buscarDocumentoFiscal(int idDocumento) async {
-  final uri = Uri.parse('${ApiConfig.documentosFiscaisUrl}/$idDocumento');
+    final uri = Uri.parse('${ApiConfig.documentosFiscaisUrl}/$idDocumento');
 
-  final response = await http
-      .get(uri, headers: ApiConfig.defaultHeaders)
-      .timeout(ApiConfig.timeout);
+    final response = await http
+        .get(uri, headers: ApiConfig.defaultHeaders)
+        .timeout(ApiConfig.timeout);
 
-  if (response.statusCode != 200) {
-    throw Exception(
-      'Não foi possível buscar documento fiscal #$idDocumento. '
-      'HTTP ${response.statusCode}: ${response.body}',
-    );
-  }
-
-  final json = jsonDecode(response.body) as Map<String, dynamic>;
-  return DocumentoFiscalModel.fromJson(json);
-}
-
-Future<ClienteModel> _buscarClienteDoPedido() async {
-  if (_cliente != null) return _cliente!;
-
-  final idCliente = _pedido.idCliente;
-
-  if (idCliente == null) {
-    throw Exception('Este pedido não tem cliente associado.');
-  }
-
-  final uri = Uri.parse('${ApiConfig.clientesUrl}/$idCliente');
-
-  final response = await http
-      .get(uri, headers: ApiConfig.defaultHeaders)
-      .timeout(ApiConfig.timeout);
-
-  if (response.statusCode != 200) {
-    throw Exception(
-      'Não foi possível buscar cliente #$idCliente. '
-      'HTTP ${response.statusCode}: ${response.body}',
-    );
-  }
-
-  final json = jsonDecode(response.body) as Map<String, dynamic>;
-  return ClienteModel.fromJson(json);
-}
-
-String _nomeTipoPagamento(int idTipoPagamento) {
-  final provider = context.read<PedidoProvider>();
-
-  try {
-    return provider.tiposPagamento
-        .firstWhere((t) => t.idTipoPagamento == idTipoPagamento)
-        .tipoPagamento;
-  } catch (_) {
-    return 'Pagamento #$idTipoPagamento';
-  }
-}
-
-Future<void> _abrirFacturaCredito() async {
-  if (_operacaoEmAndamento) return;
-
-  final idDocumento = _pedido.idDocumentoFacturaCredito;
-
-  if (idDocumento == null || idDocumento == 0) {
-    _snack(
-      'Factura ainda não disponível. Sincronize o pedido primeiro.',
-      Colors.orange,
-    );
-    return;
-  }
-
-  setState(() => _operacaoEmAndamento = true);
-
-  try {
-    final documentoFiscal = await _buscarDocumentoFiscal(idDocumento);
-    final cliente = await _buscarClienteDoPedido();
-
-    final docPdf = DocumentoPdfModel.deApiModel(
-      apiModel: documentoFiscal,
-      pedido: _pedido,
-      cliente: cliente,
-      tipoPagamento: 'Crédito',
-      prazoPagamento: 'Venda a crédito',
-    );
-
-    final file = await PdfService.instance.gerarDocumentoFiscal(docPdf);
-    await PdfService.instance.abrirPdf(file);
-  } catch (e) {
-    if (mounted) {
-      _snack('Erro ao abrir factura: $e', _kVermelho);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Não foi possível buscar documento fiscal #$idDocumento. '
+        'HTTP ${response.statusCode}: ${response.body}',
+      );
     }
-  } finally {
-    if (mounted) {
-      setState(() => _operacaoEmAndamento = false);
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return DocumentoFiscalModel.fromJson(json);
+  }
+
+  Future<ClienteModel> _buscarClienteDoPedido() async {
+    if (_cliente != null) return _cliente!;
+
+    final idCliente = _pedido.idCliente;
+
+    if (idCliente == null) {
+      throw Exception('Este pedido não tem cliente associado.');
+    }
+
+    final uri = Uri.parse('${ApiConfig.clientesUrl}/$idCliente');
+
+    final response = await http
+        .get(uri, headers: ApiConfig.defaultHeaders)
+        .timeout(ApiConfig.timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Não foi possível buscar cliente #$idCliente. '
+        'HTTP ${response.statusCode}: ${response.body}',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return ClienteModel.fromJson(json);
+  }
+
+  String _nomeTipoPagamento(int idTipoPagamento) {
+    final provider = context.read<PedidoProvider>();
+
+    try {
+      return provider.tiposPagamento
+          .firstWhere((t) => t.idTipoPagamento == idTipoPagamento)
+          .tipoPagamento;
+    } catch (_) {
+      return 'Pagamento #$idTipoPagamento';
     }
   }
-}
 
-/// Restrição temporária (decisão pendente): só permitido quando
-/// statusPagamento == PENDENTE — decidido no botão que chama este método.
-Future<void> _abrirDevolucao() async {
-  if (_operacaoEmAndamento) return;
+  Future<void> _abrirFacturaCredito() async {
+    if (_operacaoEmAndamento) return;
 
-  final idDocumento = _pedido.idDocumentoFacturaCredito;
+    final idDocumento = _pedido.idDocumentoFacturaCredito;
 
-  if (idDocumento == null || idDocumento == 0) {
-    _snack(
-      'Factura ainda não disponível. Sincronize o pedido primeiro.',
-      Colors.orange,
-    );
-    return;
+    if (idDocumento == null || idDocumento == 0) {
+      _snack(
+        'Factura ainda não disponível. Sincronize o pedido primeiro.',
+        _corAviso,
+      );
+      return;
+    }
+
+    setState(() => _operacaoEmAndamento = true);
+
+    try {
+      final documentoFiscal = await _buscarDocumentoFiscal(idDocumento);
+      final cliente = await _buscarClienteDoPedido();
+
+      final docPdf = DocumentoPdfModel.deApiModel(
+        apiModel: documentoFiscal,
+        pedido: _pedido,
+        cliente: cliente,
+        tipoPagamento: 'Crédito',
+        prazoPagamento: 'Venda a crédito',
+      );
+
+      final file = await PdfService.instance.gerarDocumentoFiscal(docPdf);
+      await PdfService.instance.abrirPdf(file);
+    } catch (e) {
+      if (mounted) {
+        _snack('Erro ao abrir factura: $e', _corErro);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _operacaoEmAndamento = false);
+      }
+    }
   }
 
-  final resultado = await Navigator.push<dynamic>(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DevolucaoTrocaScreen(
-        idPedido: _pedido.idPedido,
-        idDocumentoOrigem: idDocumento,
-        pedidoInicial: _pedido,
+  /// Restrição temporária (decisão pendente): só permitido quando
+  /// statusPagamento == PENDENTE — decidido no botão que chama este método.
+  Future<void> _abrirDevolucao() async {
+    if (_operacaoEmAndamento) return;
+
+    final idDocumento = _pedido.idDocumentoFacturaCredito;
+
+    if (idDocumento == null || idDocumento == 0) {
+      _snack(
+        'Factura ainda não disponível. Sincronize o pedido primeiro.',
+        _corAviso,
+      );
+      return;
+    }
+
+    final resultado = await Navigator.push<dynamic>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DevolucaoTrocaScreen(
+          idPedido: _pedido.idPedido,
+          idDocumentoOrigem: idDocumento,
+          pedidoInicial: _pedido,
+        ),
       ),
-    ),
-  );
-
-  if (resultado != null && mounted) {
-    await _carregar();
-  }
-}
-
-double _calcularSaldoAnteriorDoPagamento(
-  PagamentoCreditoModel pagamento,
-  List<PagamentoCreditoModel> pagamentos,
-) {
-  final ordenados = [...pagamentos]
-    ..sort((a, b) => a.dataPagamento.compareTo(b.dataPagamento));
-
-  double pagoAntes = 0;
-
-  for (final p in ordenados) {
-    if (p.idPagamentoCredito == pagamento.idPagamentoCredito) {
-      break;
-    }
-
-    pagoAntes += p.valorPago;
-  }
-
-  final saldoAnterior = _pedido.total - pagoAntes;
-
-  return saldoAnterior < 0 ? 0 : saldoAnterior;
-}
-
-Future<void> _abrirReciboCredito(
-  PagamentoCreditoModel pagamento,
-  List<PagamentoCreditoModel> pagamentos,
-  // List<ParcelaCreditoModel> parcelas,
-) async {
-  if (_operacaoEmAndamento) return;
-
-  final idRecibo = pagamento.idDocumentoRecibo;
-  final idFactura = _pedido.idDocumentoFacturaCredito;
-
-  if (idFactura == null || idFactura == 0) {
-    _snack(
-      'Factura principal ainda não disponível.',
-      Colors.orange,
-    );
-    return;
-  }
-
-  if (idRecibo == null || idRecibo == 0) {
-    _snack(
-      'Recibo ainda não disponível. Sincronize o pagamento primeiro.',
-      Colors.orange,
-    );
-    return;
-  }
-
-  setState(() => _operacaoEmAndamento = true);
-
-  try {
-    final facturaFiscal = await _buscarDocumentoFiscal(idFactura);
-    final reciboFiscal = await _buscarDocumentoFiscal(idRecibo);
-    final cliente = await _buscarClienteDoPedido();
-
-    final saldoAnterior = _calcularSaldoAnteriorDoPagamento(
-      pagamento,
-      pagamentos,
     );
 
-    final saldoRemanescente = (saldoAnterior - pagamento.valorPago) < 0
-        ? 0.0
-        : saldoAnterior - pagamento.valorPago;
-
-    // ParcelaCreditoModel? parcela;
-
-    // if (pagamento.idParcela != null) {
-    //   try {
-    //     parcela = parcelas.firstWhere(
-    //       (p) => p.idParcela == pagamento.idParcela,
-    //     );
-    //   } catch (_) {}
-    // }
-
-    final reciboPdf = ReciboCreditoPdfModel.deApiModel(
-      apiModel: reciboFiscal,
-      referenciaFactura: facturaFiscal.referencia,
-      pedido: _pedido,
-      cliente: cliente,
-      pagamento: pagamento,
-      tipoPagamento: _nomeTipoPagamento(pagamento.idTipoPagamento),
-      saldoAnterior: saldoAnterior,
-      saldoRemanescente: saldoRemanescente,
-      // numeroParcela: parcela?.numeroParcela,
-      // totalParcelas: parcelas.isEmpty ? null : parcelas.length,
-      observacoes: pagamento.observacoes,
-    );
-
-    final file = await PdfService.instance.gerarReciboCredito(reciboPdf);
-    await PdfService.instance.abrirPdf(file);
-  } catch (e) {
-    if (mounted) {
-      _snack('Erro ao abrir recibo: $e', _kVermelho);
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _operacaoEmAndamento = false);
+    if (resultado != null && mounted) {
+      await _carregar();
     }
   }
-}
 
+  double _calcularSaldoAnteriorDoPagamento(
+    PagamentoCreditoModel pagamento,
+    List<PagamentoCreditoModel> pagamentos,
+  ) {
+    final ordenados = [...pagamentos]
+      ..sort((a, b) => a.dataPagamento.compareTo(b.dataPagamento));
 
+    double pagoAntes = 0;
+
+    for (final p in ordenados) {
+      if (p.idPagamentoCredito == pagamento.idPagamentoCredito) {
+        break;
+      }
+
+      pagoAntes += p.valorPago;
+    }
+
+    final saldoAnterior = _pedido.total - pagoAntes;
+
+    return saldoAnterior < 0 ? 0 : saldoAnterior;
+  }
+
+  Future<void> _abrirReciboCredito(
+    PagamentoCreditoModel pagamento,
+    List<PagamentoCreditoModel> pagamentos,
+    // List<ParcelaCreditoModel> parcelas,
+  ) async {
+    if (_operacaoEmAndamento) return;
+
+    final idRecibo = pagamento.idDocumentoRecibo;
+    final idFactura = _pedido.idDocumentoFacturaCredito;
+
+    if (idFactura == null || idFactura == 0) {
+      _snack(
+        'Factura principal ainda não disponível.',
+        _corAviso,
+      );
+      return;
+    }
+
+    if (idRecibo == null || idRecibo == 0) {
+      _snack(
+        'Recibo ainda não disponível. Sincronize o pagamento primeiro.',
+        _corAviso,
+      );
+      return;
+    }
+
+    setState(() => _operacaoEmAndamento = true);
+
+    try {
+      final facturaFiscal = await _buscarDocumentoFiscal(idFactura);
+      final reciboFiscal = await _buscarDocumentoFiscal(idRecibo);
+      final cliente = await _buscarClienteDoPedido();
+
+      final saldoAnterior = _calcularSaldoAnteriorDoPagamento(
+        pagamento,
+        pagamentos,
+      );
+
+      final saldoRemanescente = (saldoAnterior - pagamento.valorPago) < 0
+          ? 0.0
+          : saldoAnterior - pagamento.valorPago;
+
+      // ParcelaCreditoModel? parcela;
+
+      // if (pagamento.idParcela != null) {
+      //   try {
+      //     parcela = parcelas.firstWhere(
+      //       (p) => p.idParcela == pagamento.idParcela,
+      //     );
+      //   } catch (_) {}
+      // }
+
+      final reciboPdf = ReciboCreditoPdfModel.deApiModel(
+        apiModel: reciboFiscal,
+        referenciaFactura: facturaFiscal.referencia,
+        pedido: _pedido,
+        cliente: cliente,
+        pagamento: pagamento,
+        tipoPagamento: _nomeTipoPagamento(pagamento.idTipoPagamento),
+        saldoAnterior: saldoAnterior,
+        saldoRemanescente: saldoRemanescente,
+        // numeroParcela: parcela?.numeroParcela,
+        // totalParcelas: parcelas.isEmpty ? null : parcelas.length,
+        observacoes: pagamento.observacoes,
+      );
+
+      final file = await PdfService.instance.gerarReciboCredito(reciboPdf);
+      await PdfService.instance.abrirPdf(file);
+    } catch (e) {
+      if (mounted) {
+        _snack('Erro ao abrir recibo: $e', _corErro);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _operacaoEmAndamento = false);
+      }
+    }
+  }
 
   // Future<void> _abrirDialogoParcelas({
   //   required List<ParcelaCreditoModel> parcelas,
@@ -659,7 +671,7 @@ Future<void> _abrirReciboCredito(
   //   if (_operacaoEmAndamento) return;
 
   //   if (saldoAtual <= 0) {
-  //     _snack('Esta dívida já está liquidada.', Colors.green);
+  //     _snack('Esta dívida já está liquidada.', _corSucesso);
   //     return;
   //   }
 
@@ -674,14 +686,15 @@ Future<void> _abrirReciboCredito(
   //     builder: (ctx) {
   //       return StatefulBuilder(
   //         builder: (ctx, setDialogState) {
+  //           final c = ctx.cores;
   //           return AlertDialog(
   //             shape: RoundedRectangleBorder(
   //               borderRadius: BorderRadius.circular(14),
   //             ),
-  //             title: const Text(
+  //             title: Text(
   //               'Criar parcelas',
   //               style: TextStyle(
-  //                 color: _kAzul,
+  //                 color: c.marca,
   //                 fontWeight: FontWeight.w700,
   //               ),
   //             ),
@@ -694,7 +707,7 @@ Future<void> _abrirReciboCredito(
   //                     icon: Icons.account_balance_wallet_outlined,
   //                     texto:
   //                         'Saldo a parcelar: ${_currencyFmt.format(saldoAtual)}',
-  //                     cor: _kAzul,
+  //                     cor: c.marca,
   //                   ),
   //                   if (parcelas.isNotEmpty) ...[
   //                     const SizedBox(height: 10),
@@ -702,7 +715,7 @@ Future<void> _abrirReciboCredito(
   //                       icon: Icons.warning_amber_rounded,
   //                       texto:
   //                           'Esta dívida já possui parcelas. Criar novas parcelas pode substituir ou sobrepor o plano actual, conforme a regra do repository/backend.',
-  //                       cor: Colors.orange,
+  //                       cor: c.aviso,
   //                     ),
   //                   ],
   //                   const SizedBox(height: 12),
@@ -748,9 +761,9 @@ Future<void> _abrirReciboCredito(
   //                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
   //                         children: [
   //                           Text(_dateFmt.format(primeiroVencimento)),
-  //                           const Icon(
+  //                           Icon(
   //                             Icons.calendar_month_outlined,
-  //                             color: _kAzul,
+  //                             color: c.marca,
   //                           ),
   //                         ],
   //                       ),
@@ -769,7 +782,7 @@ Future<void> _abrirReciboCredito(
   //                     _DialogInfoBox(
   //                       icon: Icons.warning_amber_rounded,
   //                       texto: erro!,
-  //                       cor: _kVermelho,
+  //                       cor: c.perigo,
   //                     ),
   //                   ],
   //                 ],
@@ -778,9 +791,9 @@ Future<void> _abrirReciboCredito(
   //             actions: [
   //               TextButton(
   //                 onPressed: () => Navigator.pop(ctx, false),
-  //                 child: const Text(
+  //                 child: Text(
   //                   'Cancelar',
-  //                   style: TextStyle(color: _kCinzaTexto),
+  //                   style: TextStyle(color: c.textoSecundario),
   //                 ),
   //               ),
   //               ElevatedButton.icon(
@@ -797,8 +810,8 @@ Future<void> _abrirReciboCredito(
   //                 icon: const Icon(Icons.check_rounded),
   //                 label: const Text('Criar parcelas'),
   //                 style: ElevatedButton.styleFrom(
-  //                   backgroundColor: _kAzul,
-  //                   foregroundColor: _kBranco,
+  //                   backgroundColor: c.marcaBotao,
+  //                   foregroundColor: AppColors.branco,
   //                 ),
   //               ),
   //             ],
@@ -829,12 +842,12 @@ Future<void> _abrirReciboCredito(
   //     if (!mounted) return;
 
   //     if (criadas.isNotEmpty && provider.errorMessage == null) {
-  //       _snack('Parcelas criadas com sucesso.', Colors.green);
+  //       _snack('Parcelas criadas com sucesso.', _corSucesso);
   //       await _carregar();
   //     } else {
   //       _snack(
   //         provider.errorMessage ?? 'Não foi possível criar as parcelas.',
-  //         _kVermelho,
+  //         _corErro,
   //       );
   //     }
   //   } finally {
@@ -894,32 +907,43 @@ Future<void> _abrirReciboCredito(
     String label, {
     String? prefixText,
   }) {
+    final c = context.cores;
+    final bordaCampo = BorderSide(
+      color: c.marca.withValues(alpha: context.escuro ? 0.35 : 0.15),
+    );
+
     return InputDecoration(
       labelText: label,
       prefixText: prefixText,
       filled: true,
-      fillColor: _kCinzaClaro,
+      fillColor: c.fundo,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 10,
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: _kAzul.withOpacity(0.15)),
+        borderSide: bordaCampo,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: _kAzul.withOpacity(0.15)),
+        borderSide: bordaCampo,
       ),
     );
   }
 
+  /// As snackbars usam fundo colorido FIXO com texto branco explícito: sem
+  /// isso, no tema escuro o texto herdaria `textoPrincipal` (claro) e perderia
+  /// contraste sobre o fundo.
   void _snack(String mensagem, Color cor) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
+        content: Text(
+          mensagem,
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: cor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -930,16 +954,17 @@ Future<void> _abrirReciboCredito(
   void _pdfEmBreve(String tipo) {
     _snack(
       '$tipo será ligado na próxima etapa de documentos/PDF.',
-      _kAzul,
+      _corInfo,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PedidoProvider>();
+    final c = context.cores;
 
-// Parcelas desactivadas por enquanto.
-// final parcelas = provider.parcelasCredito;
+    // Parcelas desactivadas por enquanto.
+    // final parcelas = provider.parcelasCredito;
     final pagamentos = provider.pagamentosCredito;
 
     final totalPago = _totalPagoEfetivo(pagamentos);
@@ -947,49 +972,49 @@ Future<void> _abrirReciboCredito(
     final progresso = _progressoPagamento(pagamentos);
 
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       body: _carregando
-          ? const Center(child: CircularProgressIndicator(color: _kAzul))
+          ? Center(child: CircularProgressIndicator(color: c.marca))
           : _erroLocal != null
               ? _ErroState(
                   erro: _erroLocal!,
                   onRecarregar: _carregar,
                 )
               : RefreshIndicator(
-                  color: _kAzul,
+                  color: c.acentoTexto,
                   onRefresh: _carregar,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
                     children: [
-                _ResumoCreditoCard(
-  pedido: _pedido,
-  totalPago: totalPago,
-  saldo: saldo,
-  progresso: progresso,
-  vencido: _pedidoVencido(),
-  currencyFmt: _currencyFmt,
-  dateFmt: _dateFmt,
-  carregandoCliente: _carregandoCliente,
-  clienteLabel: _cliente?.nomeCompleto ??
-      (_pedido.idCliente != null
-          ? 'ID: ${_pedido.idCliente}'
-          : 'Cliente não informado'),
-),
+                      _ResumoCreditoCard(
+                        pedido: _pedido,
+                        totalPago: totalPago,
+                        saldo: saldo,
+                        progresso: progresso,
+                        vencido: _pedidoVencido(),
+                        currencyFmt: _currencyFmt,
+                        dateFmt: _dateFmt,
+                        carregandoCliente: _carregandoCliente,
+                        clienteLabel: _cliente?.nomeCompleto ??
+                            (_pedido.idCliente != null
+                                ? 'ID: ${_pedido.idCliente}'
+                                : 'Cliente não informado'),
+                      ),
                       const SizedBox(height: 12),
                       _FacturaPrincipalCard(
-  pedido: _pedido,
-  onAbrirFactura: _abrirFacturaCredito,
-),
-_AcoesCreditoCard(
-  operacaoEmAndamento: _operacaoEmAndamento,
-  saldo: saldo,
-  podeDevolver: _pedido.statusPagamento == 'PENDENTE',
-  onRegistarPagamento: () => _abrirDialogoPagamento(
-    saldoAtual: saldo,
-  ),
-  onDevolver: _abrirDevolucao,
-),
+                        pedido: _pedido,
+                        onAbrirFactura: _abrirFacturaCredito,
+                      ),
+                      _AcoesCreditoCard(
+                        operacaoEmAndamento: _operacaoEmAndamento,
+                        saldo: saldo,
+                        podeDevolver: _pedido.statusPagamento == 'PENDENTE',
+                        onRegistarPagamento: () => _abrirDialogoPagamento(
+                          saldoAtual: saldo,
+                        ),
+                        onDevolver: _abrirDevolucao,
+                      ),
                       // const SizedBox(height: 12),
                       // _ParcelasCard(
                       //   parcelas: parcelas,
@@ -1001,16 +1026,16 @@ _AcoesCreditoCard(
                       //   ),
                       // ),
                       const SizedBox(height: 12),
-                    _PagamentosCard(
-  pagamentos: pagamentos,
-  currencyFmt: _currencyFmt,
-  dateFmt: _dateFmt,
-  onAbrirRecibo: (pagamento) => _abrirReciboCredito(
-    pagamento,
-    pagamentos,
-    // parcelas,
-  ),
-),
+                      _PagamentosCard(
+                        pagamentos: pagamentos,
+                        currencyFmt: _currencyFmt,
+                        dateFmt: _dateFmt,
+                        onAbrirRecibo: (pagamento) => _abrirReciboCredito(
+                          pagamento,
+                          pagamentos,
+                          // parcelas,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1019,20 +1044,22 @@ _AcoesCreditoCard(
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.receipt_long_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -1091,6 +1118,8 @@ class _ResumoCreditoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return _CardBase(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1104,13 +1133,13 @@ class _ResumoCreditoCard extends StatelessWidget {
               const Spacer(),
               _StatusBadge(
                 label: _statusLabel(pedido),
-                color: _statusColor(pedido),
+                color: _statusColor(c, pedido),
               ),
               if (vencido) ...[
                 const SizedBox(width: 6),
-                const _StatusBadge(
+                _StatusBadge(
                   label: 'Vencido',
-                  color: Colors.orange,
+                  color: c.aviso,
                 ),
               ],
             ],
@@ -1123,7 +1152,7 @@ class _ResumoCreditoCard extends StatelessWidget {
                   label: 'Total facturado',
                   value: currencyFmt.format(pedido.total),
                   icon: Icons.receipt_long_rounded,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1132,7 +1161,7 @@ class _ResumoCreditoCard extends StatelessWidget {
                   label: 'Total pago',
                   value: currencyFmt.format(totalPago),
                   icon: Icons.payments_rounded,
-                  color: Colors.green,
+                  color: c.sucesso,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1141,7 +1170,7 @@ class _ResumoCreditoCard extends StatelessWidget {
                   label: 'Saldo',
                   value: currencyFmt.format(saldo),
                   icon: Icons.warning_amber_rounded,
-                  color: saldo <= 0 ? Colors.green : _kVermelho,
+                  color: saldo <= 0 ? c.sucesso : c.acentoTexto,
                 ),
               ),
             ],
@@ -1152,8 +1181,8 @@ class _ResumoCreditoCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progresso,
               minHeight: 8,
-              backgroundColor: _kCinzaClaro,
-              color: progresso >= 1 ? Colors.green : _kAzul,
+              backgroundColor: c.borda,
+              color: progresso >= 1 ? c.sucesso : c.marca,
             ),
           ),
           const SizedBox(height: 10),
@@ -1161,30 +1190,33 @@ class _ResumoCreditoCard extends StatelessWidget {
             spacing: 14,
             runSpacing: 8,
             children: [
-             if (carregandoCliente)
-  const Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-      SizedBox(width: 6),
-      Text(
-        'A carregar cliente...',
-        style: TextStyle(
-          color: _kCinzaTexto,
-          fontSize: 12,
-        ),
-      ),
-    ],
-  )
-else
-  _MiniInfo(
-    icon: Icons.business_outlined,
-    label: clienteLabel,
-  ),
+              if (carregandoCliente)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: c.marca,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'A carregar cliente...',
+                      style: TextStyle(
+                        color: c.textoSecundario,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                _MiniInfo(
+                  icon: Icons.business_outlined,
+                  label: clienteLabel,
+                ),
               _MiniInfo(
                 icon: Icons.calendar_today_outlined,
                 label:
@@ -1207,7 +1239,7 @@ else
             _InfoBox(
               icon: Icons.info_outline,
               texto: pedido.observacoesCredito!,
-              cor: _kAzul,
+              cor: c.marca,
             ),
           ],
         ],
@@ -1231,6 +1263,7 @@ class _FacturaPrincipalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final temFactura = pedido.idDocumentoFacturaCredito != null;
 
     return _CardBase(
@@ -1239,12 +1272,12 @@ class _FacturaPrincipalCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(11),
             decoration: BoxDecoration(
-              color: _kAzul.withOpacity(0.08),
+              color: c.marca.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.description_outlined,
-              color: _kAzul,
+              color: c.marca,
               size: 24,
             ),
           ),
@@ -1253,10 +1286,10 @@ class _FacturaPrincipalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Factura principal',
                   style: TextStyle(
-                    color: _kAzul,
+                    color: c.marca,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1267,7 +1300,7 @@ class _FacturaPrincipalCard extends StatelessWidget {
                       ? 'Documento fiscal #${pedido.idDocumentoFacturaCredito}'
                       : 'Factura ainda pendente de emissão/sincronização',
                   style: TextStyle(
-                    color: temFactura ? _kCinzaTexto : Colors.orange,
+                    color: temFactura ? c.textoSecundario : c.aviso,
                     fontSize: 12,
                   ),
                 ),
@@ -1279,8 +1312,8 @@ class _FacturaPrincipalCard extends StatelessWidget {
             icon: const Icon(Icons.picture_as_pdf_outlined, size: 17),
             label: const Text('Factura'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: _kAzul,
-              side: const BorderSide(color: _kAzul),
+              foregroundColor: c.marca,
+              side: BorderSide(color: c.marca),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -1313,6 +1346,7 @@ class _AcoesCreditoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final liquidada = saldo <= 0;
 
     return _CardBase(
@@ -1334,8 +1368,8 @@ class _AcoesCreditoCard extends StatelessWidget {
                 icon: const Icon(Icons.payments_outlined, size: 18),
                 label: const Text('Registar pagamento'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kAzul,
-                  foregroundColor: _kBranco,
+                  backgroundColor: c.marcaBotao,
+                  foregroundColor: AppColors.branco,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -1352,8 +1386,8 @@ class _AcoesCreditoCard extends StatelessWidget {
                 icon: const Icon(Icons.assignment_return_outlined, size: 18),
                 label: const Text('Devolver / Anular'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kVermelho,
-                  side: const BorderSide(color: _kVermelho),
+                  foregroundColor: c.acentoTexto,
+                  side: BorderSide(color: c.acentoTexto),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -1386,6 +1420,7 @@ class _AcoesCreditoCard extends StatelessWidget {
 
 //   @override
 //   Widget build(BuildContext context) {
+//     final c = context.cores;
 //     return _CardBase(
 //       child: Column(
 //         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1401,7 +1436,7 @@ class _AcoesCreditoCard extends StatelessWidget {
 //                 onPressed: onCriarParcelas,
 //                 icon: const Icon(Icons.add_rounded, size: 17),
 //                 label: const Text('Criar'),
-//                 style: TextButton.styleFrom(foregroundColor: _kAzul),
+//                 style: TextButton.styleFrom(foregroundColor: c.marca),
 //               ),
 //             ],
 //           ),
@@ -1442,6 +1477,7 @@ class _AcoesCreditoCard extends StatelessWidget {
 
 //   @override
 //   Widget build(BuildContext context) {
+//     final c = context.cores;
 //     final saldo = parcela.saldoParcela ??
 //         (parcela.valorParcela - parcela.valorPago).clamp(0, double.infinity);
 
@@ -1450,24 +1486,24 @@ class _AcoesCreditoCard extends StatelessWidget {
 //     final parcial = status == 'PARCIAL';
 
 //     final cor = paga
-//         ? Colors.green
+//         ? c.sucesso
 //         : parcial
-//             ? _kAzul
-//             : _kVermelho;
+//             ? c.marca
+//             : c.acentoTexto;
 
 //     return Container(
 //       margin: const EdgeInsets.only(bottom: 8),
 //       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
 //       decoration: BoxDecoration(
-//         color: _kCinzaClaro,
+//         color: c.fundo,
 //         borderRadius: BorderRadius.circular(10),
-//         border: Border.all(color: const Color(0xFFE5E7EB)),
+//         border: Border.all(color: c.borda),
 //       ),
 //       child: Row(
 //         children: [
 //           CircleAvatar(
 //             radius: 15,
-//             backgroundColor: cor.withOpacity(0.10),
+//             backgroundColor: cor.withValues(alpha: 0.12),
 //             child: Text(
 //               '${parcela.numeroParcela}',
 //               style: TextStyle(
@@ -1504,7 +1540,7 @@ class _AcoesCreditoCard extends StatelessWidget {
 //             child: _TextPair(
 //               label: 'Saldo',
 //               value: currencyFmt.format(saldo),
-//               valueColor: saldo <= 0 ? Colors.green : _kVermelho,
+//               valueColor: saldo <= 0 ? c.sucesso : c.acentoTexto,
 //             ),
 //           ),
 //           _StatusBadge(
@@ -1525,7 +1561,7 @@ class _PagamentosCard extends StatelessWidget {
   final List<PagamentoCreditoModel> pagamentos;
   final NumberFormat currencyFmt;
   final DateFormat dateFmt;
-final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
+  final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
 
   const _PagamentosCard({
     required this.pagamentos,
@@ -1555,11 +1591,11 @@ final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
               children: pagamentos
                   .map(
                     (p) => _LinhaPagamento(
-  pagamento: p,
-  currencyFmt: currencyFmt,
-  dateFmt: dateFmt,
-  onAbrirRecibo: onAbrirRecibo,
-),
+                      pagamento: p,
+                      currencyFmt: currencyFmt,
+                      dateFmt: dateFmt,
+                      onAbrirRecibo: onAbrirRecibo,
+                    ),
                   )
                   .toList(),
             ),
@@ -1573,7 +1609,7 @@ class _LinhaPagamento extends StatelessWidget {
   final PagamentoCreditoModel pagamento;
   final NumberFormat currencyFmt;
   final DateFormat dateFmt;
-final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
+  final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
 
   const _LinhaPagamento({
     required this.pagamento,
@@ -1584,6 +1620,7 @@ final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final temRecibo = pagamento.idDocumentoRecibo != null &&
         pagamento.idDocumentoRecibo != 0;
 
@@ -1591,18 +1628,18 @@ final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 15,
-            backgroundColor: Colors.green.withOpacity(0.10),
-            child: const Icon(
+            backgroundColor: c.sucesso.withValues(alpha: 0.12),
+            child: Icon(
               Icons.check_rounded,
-              color: Colors.green,
+              color: c.sucesso,
               size: 17,
             ),
           ),
@@ -1619,7 +1656,7 @@ final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
             child: _TextPair(
               label: 'Valor pago',
               value: currencyFmt.format(pagamento.valorPago),
-              valueColor: Colors.green,
+              valueColor: c.sucesso,
             ),
           ),
           Expanded(
@@ -1638,17 +1675,17 @@ final void Function(PagamentoCreditoModel pagamento) onAbrirRecibo;
               value: temRecibo
                   ? 'Doc. #${pagamento.idDocumentoRecibo}'
                   : 'Pendente',
-              valueColor: temRecibo ? _kAzul : Colors.orange,
+              valueColor: temRecibo ? c.marca : c.aviso,
             ),
           ),
-         IconButton(
-  tooltip: 'Abrir recibo',
-  onPressed: temRecibo ? () => onAbrirRecibo(pagamento) : null,
-  icon: Icon(
-    Icons.picture_as_pdf_outlined,
-    color: temRecibo ? _kAzul : _kCinzaTexto,
-  ),
-),
+          IconButton(
+            tooltip: 'Abrir recibo',
+            onPressed: temRecibo ? () => onAbrirRecibo(pagamento) : null,
+            icon: Icon(
+              Icons.picture_as_pdf_outlined,
+              color: temRecibo ? c.marca : c.textoSecundario,
+            ),
+          ),
         ],
       ),
     );
@@ -1666,12 +1703,13 @@ class _CardBase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Card(
-      color: _kBranco,
+      color: c.superficie,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -1692,14 +1730,15 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Row(
       children: [
-        Icon(icon, color: _kAzul, size: 18),
+        Icon(icon, color: c.marca, size: 18),
         const SizedBox(width: 7),
         Text(
           title,
-          style: const TextStyle(
-            color: _kAzul,
+          style: TextStyle(
+            color: c.marca,
             fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
@@ -1724,15 +1763,16 @@ class _InfoMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 10,
         vertical: 10,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
+        color: color.withValues(alpha: context.escuro ? 0.14 : 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
@@ -1744,8 +1784,8 @@ class _InfoMetric extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: _kCinzaTexto,
+                  style: TextStyle(
+                    color: c.textoSecundario,
                     fontSize: 11,
                   ),
                 ),
@@ -1780,15 +1820,16 @@ class _MiniInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: _kCinzaTexto),
+        Icon(icon, size: 13, color: c.textoSecundario),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: _kCinzaTexto,
+          style: TextStyle(
+            color: c.textoSecundario,
             fontSize: 12,
           ),
         ),
@@ -1810,13 +1851,14 @@ class _TextPair extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: _kCinzaTexto,
+          style: TextStyle(
+            color: c.textoSecundario,
             fontSize: 10,
           ),
         ),
@@ -1826,7 +1868,7 @@ class _TextPair extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: valueColor ?? _kAzul,
+            color: valueColor ?? c.marca,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -1850,9 +1892,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: context.escuro ? 0.16 : 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -1885,9 +1927,9 @@ class _InfoBox extends StatelessWidget {
         vertical: 8,
       ),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: context.escuro ? 0.14 : 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cor.withOpacity(0.25)),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -1940,6 +1982,7 @@ class _EmptyBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -1947,18 +1990,18 @@ class _EmptyBox extends StatelessWidget {
         vertical: 18,
       ),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Column(
         children: [
-          Icon(icon, color: _kCinzaTexto, size: 34),
+          Icon(icon, color: c.textoSecundario, size: 34),
           const SizedBox(height: 8),
           Text(
             text,
-            style: const TextStyle(
-              color: _kCinzaTexto,
+            style: TextStyle(
+              color: c.textoSecundario,
               fontSize: 13,
             ),
           ),
@@ -1979,22 +2022,23 @@ class _ErroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
-              color: _kVermelho,
+              color: c.perigo,
               size: 52,
             ),
             const SizedBox(height: 12),
             Text(
               erro,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.perigo),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -2002,8 +2046,8 @@ class _ErroState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Tentar novamente'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kAzul,
-                foregroundColor: _kBranco,
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
               ),
             ),
           ],
@@ -2030,6 +2074,7 @@ class _PreviewParcelas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final valorBase =
         double.parse((total / numeroParcelas).toStringAsFixed(2));
 
@@ -2059,16 +2104,16 @@ class _PreviewParcelas extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Parcela $i',
-                  style: const TextStyle(
-                    color: _kCinzaTexto,
+                  style: TextStyle(
+                    color: c.textoSecundario,
                     fontSize: 12,
                   ),
                 ),
               ),
               Text(
                 currencyFmt.format(valor),
-                style: const TextStyle(
-                  color: _kAzul,
+                style: TextStyle(
+                  color: c.marca,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -2076,8 +2121,8 @@ class _PreviewParcelas extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 dateFmt.format(data),
-                style: const TextStyle(
-                  color: _kCinzaTexto,
+                style: TextStyle(
+                  color: c.textoSecundario,
                   fontSize: 12,
                 ),
               ),
@@ -2091,17 +2136,17 @@ class _PreviewParcelas extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _kCinzaClaro,
+        color: c.fundo,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: c.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Pré-visualização',
             style: TextStyle(
-              color: _kAzul,
+              color: c.marca,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -2140,16 +2185,18 @@ String _statusLabel(PedidoModel pedido) {
   }
 }
 
-Color _statusColor(PedidoModel pedido) {
+/// Recebe as cores do tema (em vez de constantes fixas) para funcionar
+/// nos modos claro e escuro: `_statusColor(context.cores, pedido)`.
+Color _statusColor(AppColors c, PedidoModel pedido) {
   switch (pedido.statusPagamento.toUpperCase()) {
     case 'PAGO':
-      return Colors.green;
+      return c.sucesso;
     case 'PARCIAL':
-      return _kAzul;
+      return c.marca;
     case 'PENDENTE':
-      return _kVermelho;
+      return c.acentoTexto;
     default:
-      return _kCinzaTexto;
+      return c.textoSecundario;
   }
 }
 

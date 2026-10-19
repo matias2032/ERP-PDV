@@ -5,18 +5,26 @@ import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:api_compartilhado/api_config.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'cotacao_detalhes_produto.dart';
 import 'cotacao_detalhes_servico.dart';
 import 'cotacoes_abertas_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONSTANTES DE CORES
+// CORES
 // ═══════════════════════════════════════════════════════════════════════════
-
-const _kPrimary    = Color(0xFF1B2A6B);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
+// As antigas constantes (_kPrimary, _kAccent, _kBackground) foram
+// substituídas pelo tema:
+//   _kPrimary    → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão/chip activo)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kAccent     → AppColors.vermelhoMarca (fundo: badge, indicador da aba;
+//                  texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone/spinner)
+//   _kBackground → context.cores.fundo
+//   Colors.red / green / blue / grey → perigo / sucesso / info / textoSecundario /
+//                  desactivado (variantes legíveis nos dois temas)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TELA PRINCIPAL
@@ -47,12 +55,16 @@ class _CotacaoCatalogoScreenState extends State<CotacaoCatalogoScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: c.fundo,
       drawer: const AppSidebar(currentRoute: '/criar_cotacao'),
       appBar: AppBar(
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+        backgroundColor:
+            context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+        foregroundColor: AppColors.branco,
         elevation: 0,
         title: const Text(
           'Catálogo — Cotação',
@@ -61,9 +73,9 @@ class _CotacaoCatalogoScreenState extends State<CotacaoCatalogoScreen>
         actions: const [_BadgeCotacoesAbertas()],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: _kAccent,
+          indicatorColor: AppColors.vermelhoMarca,
           indicatorWeight: 3,
-          labelColor: Colors.white,
+          labelColor: AppColors.branco,
           unselectedLabelColor: Colors.white60,
           labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           tabs: const [
@@ -141,6 +153,7 @@ class _ProdutosTabState extends State<_ProdutosTab>
   Widget build(BuildContext context) {
     super.build(context);
 
+    final c = context.cores;
     final provider = context.watch<ProdutoProvider>();
 
     if (!provider.isLoading && provider.errorMessage == null) {
@@ -149,7 +162,7 @@ class _ProdutosTabState extends State<_ProdutosTab>
     }
 
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: c.fundo,
       body: Column(
         children: [
           _buildFiltros(),
@@ -161,8 +174,10 @@ class _ProdutosTabState extends State<_ProdutosTab>
 
   // ── Painel de Filtros ──────────────────────────────────────────────────
   Widget _buildFiltros() {
+    final c = context.cores;
+
     return Container(
-      color: _kPrimary.withOpacity(0.04),
+      color: c.marca.withValues(alpha: context.escuro ? 0.08 : 0.04),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
         children: [
@@ -170,7 +185,7 @@ class _ProdutosTabState extends State<_ProdutosTab>
             controller: _searchCtrl,
             decoration: InputDecoration(
               hintText: 'Pesquisar produto…',
-              prefixIcon: const Icon(Icons.search, color: _kPrimary),
+              prefixIcon: Icon(Icons.search, color: c.marca),
               suffixIcon: _buscaNome.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -180,7 +195,7 @@ class _ProdutosTabState extends State<_ProdutosTab>
                       })
                   : null,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: c.superficie,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -204,7 +219,7 @@ class _ProdutosTabState extends State<_ProdutosTab>
             alignment: Alignment.centerRight,
             child: Text(
               '${_filtrados.length} produto(s) encontrado(s)',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: c.textoSecundario),
             ),
           ),
         ],
@@ -214,8 +229,10 @@ class _ProdutosTabState extends State<_ProdutosTab>
 
   // ── Lista ──────────────────────────────────────────────────────────────
   Widget _buildLista(ProdutoProvider provider) {
+    final c = context.cores;
+
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
     if (provider.errorMessage != null) {
       return _ErroWidget(
@@ -233,7 +250,8 @@ class _ProdutosTabState extends State<_ProdutosTab>
     }
 
     return RefreshIndicator(
-      color: _kAccent,
+      color: c.acentoTexto,
+      backgroundColor: c.superficie,
       onRefresh: () => context.read<ProdutoProvider>().listarAtivos(),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
@@ -312,8 +330,10 @@ class _ServicosTabState extends State<_ServicosTab>
   }
 
   Widget _buildFiltros() {
+    final c = context.cores;
+
     return Container(
-      color: _kPrimary.withOpacity(0.04),
+      color: c.marca.withValues(alpha: context.escuro ? 0.08 : 0.04),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
         children: [
@@ -321,7 +341,7 @@ class _ServicosTabState extends State<_ServicosTab>
             controller: _searchCtrl,
             decoration: InputDecoration(
               hintText: 'Pesquisar serviço…',
-              prefixIcon: const Icon(Icons.search, color: _kPrimary),
+              prefixIcon: Icon(Icons.search, color: c.marca),
               suffixIcon: _buscaNomeServ.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -331,7 +351,7 @@ class _ServicosTabState extends State<_ServicosTab>
                       })
                   : null,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: c.superficie,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -355,7 +375,7 @@ class _ServicosTabState extends State<_ServicosTab>
             alignment: Alignment.centerRight,
             child: Text(
               '${_filtrados.length} serviço(s) encontrado(s)',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: c.textoSecundario),
             ),
           ),
         ],
@@ -367,6 +387,7 @@ class _ServicosTabState extends State<_ServicosTab>
   Widget build(BuildContext context) {
     super.build(context);
 
+    final c = context.cores;
     final provider = context.watch<ServicoProvider>();
 
     if (!provider.isLoading && provider.errorMessage == null) {
@@ -375,7 +396,7 @@ class _ServicosTabState extends State<_ServicosTab>
     }
 
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: c.fundo,
       body: Column(
         children: [
           _buildFiltros(),
@@ -386,8 +407,10 @@ class _ServicosTabState extends State<_ServicosTab>
   }
 
   Widget _buildLista(ServicoProvider provider) {
+    final c = context.cores;
+
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
     if (provider.errorMessage != null) {
       return _ErroWidget(
@@ -405,7 +428,8 @@ class _ServicosTabState extends State<_ServicosTab>
     }
 
     return RefreshIndicator(
-      color: _kAccent,
+      color: c.acentoTexto,
+      backgroundColor: c.superficie,
       onRefresh: () => context.read<ServicoProvider>().carregarServicosAtivos(),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
@@ -486,9 +510,9 @@ class _BadgeCotacoesAbertasState extends State<_BadgeCotacoesAbertas> {
             isLabelVisible: count > 0,
             label: Text(
               count > 99 ? '99+' : '$count',
-              style: const TextStyle(fontSize: 10, color: Colors.white),
+              style: const TextStyle(fontSize: 10, color: AppColors.branco),
             ),
-            backgroundColor: _kAccent,
+            backgroundColor: AppColors.vermelhoMarca,
             child: const Icon(Icons.request_quote_outlined),
           ),
         );
@@ -516,12 +540,13 @@ class _ProdutoLinhaTabela extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final temPromo = produto.precoPromocional != null;
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE8EAF0), width: 1)),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(bottom: BorderSide(color: c.borda, width: 1)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -535,7 +560,7 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                   produto.nomeProduto,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kPrimary),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.marca),
                 ),
               ),
               Expanded(
@@ -543,20 +568,20 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                 child: temPromo
                     ? Text(
                         currencyFmt.format(produto.precoPromocional),
-                        style: const TextStyle(fontSize: 12, color: _kAccent, fontWeight: FontWeight.w700),
+                        style: TextStyle(fontSize: 12, color: c.acentoTexto, fontWeight: FontWeight.w700),
                       )
                     : Text(
                         currencyFmt.format(produto.preco),
-                        style: const TextStyle(fontSize: 12, color: _kPrimary, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 12, color: c.marca, fontWeight: FontWeight.w500),
                       ),
               ),
               Expanded(
                 flex: 2,
                 child: Row(children: [
-                  Icon(Icons.inventory_2_outlined, size: 14, color: Colors.green[600]),
+                  Icon(Icons.inventory_2_outlined, size: 14, color: c.sucesso),
                   const SizedBox(width: 4),
                   Text('${produto.quantidadeEstoque}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                      style: TextStyle(fontSize: 12, color: c.textoSecundario)),
                 ]),
               ),
               SizedBox(
@@ -564,14 +589,14 @@ class _ProdutoLinhaTabela extends StatelessWidget {
                 child: TextButton(
                   onPressed: onTap,
                   style: TextButton.styleFrom(
-                    backgroundColor: _kPrimary,
+                    backgroundColor: c.marcaBotao,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: const Text('Adicionar',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: AppColors.branco, fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -597,10 +622,12 @@ class _ServicoLinhaTabela extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE8EAF0), width: 1)),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(bottom: BorderSide(color: c.borda, width: 1)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -616,10 +643,10 @@ class _ServicoLinhaTabela extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: _kPrimary.withOpacity(0.08),
+                        color: c.marca.withValues(alpha: context.escuro ? 0.16 : 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.miscellaneous_services, size: 16, color: _kPrimary),
+                      child: Icon(Icons.miscellaneous_services, size: 16, color: c.marca),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -627,7 +654,7 @@ class _ServicoLinhaTabela extends StatelessWidget {
                         servico.nomeServico,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kPrimary),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.marca),
                       ),
                     ),
                   ],
@@ -637,7 +664,7 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 flex: 2,
                 child: Text(
                   currencyFmt.format(servico.precoUnitario),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kPrimary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c.marca),
                 ),
               ),
               Expanded(
@@ -645,14 +672,14 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: c.infoFundo,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.blue.shade200),
+                    border: Border.all(color: c.info.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     servico.unidade,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 10, color: c.info, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -661,14 +688,14 @@ class _ServicoLinhaTabela extends StatelessWidget {
                 child: TextButton(
                   onPressed: onTap,
                   style: TextButton.styleFrom(
-                    backgroundColor: _kPrimary,
+                    backgroundColor: c.marcaBotao,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: const Text('Adicionar',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: AppColors.branco, fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -690,21 +717,23 @@ class _ErroWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 56, color: Colors.red),
+            Icon(Icons.error_outline, size: 56, color: c.perigo),
             const SizedBox(height: 12),
-            Text(mensagem, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+            Text(mensagem, textAlign: TextAlign.center, style: TextStyle(color: c.perigo)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              label: const Text('Tentar Novamente', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: c.marcaBotao),
+              icon: const Icon(Icons.refresh, color: AppColors.branco),
+              label: const Text('Tentar Novamente', style: TextStyle(color: AppColors.branco)),
             ),
           ],
         ),
@@ -720,13 +749,15 @@ class _VazioWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icone, size: 72, color: Colors.grey[300]),
+          Icon(icone, size: 72, color: c.desactivado),
           const SizedBox(height: 12),
-          Text(mensagem, style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+          Text(mensagem, style: TextStyle(fontSize: 16, color: c.textoSecundario)),
         ],
       ),
     );
@@ -750,6 +781,7 @@ class _FiltroPrecoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final fmt = NumberFormat.compactCurrency(locale: 'pt_PT', symbol: 'MZN');
 
     final safeMin = precoMin.clamp(0.0, precoMaxAbsoluto);
@@ -762,18 +794,18 @@ class _FiltroPrecoRow extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: ativo ? _kPrimary : Colors.white,
+          color: ativo ? c.marcaBotao : c.superficie,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ativo ? _kPrimary : Colors.grey.shade300),
+          border: Border.all(color: ativo ? c.marcaBotao : c.borda),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.tune, size: 15, color: ativo ? Colors.white : Colors.grey[600]),
+          Icon(Icons.tune, size: 15, color: ativo ? AppColors.branco : c.textoSecundario),
           const SizedBox(width: 5),
           Text(
             ativo ? '${fmt.format(safeMin)} – ${fmt.format(safeMax)}' : 'Faixa de Preço',
             style: TextStyle(
               fontSize: 12,
-              color: ativo ? Colors.white : Colors.grey[700],
+              color: ativo ? AppColors.branco : c.textoSecundario,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -781,7 +813,7 @@ class _FiltroPrecoRow extends StatelessWidget {
             const SizedBox(width: 6),
             GestureDetector(
               onTap: () => onChanged(0, precoMaxAbsoluto),
-              child: const Icon(Icons.close, size: 13, color: Colors.white),
+              child: const Icon(Icons.close, size: 13, color: AppColors.branco),
             ),
           ],
         ]),
@@ -790,6 +822,8 @@ class _FiltroPrecoRow extends StatelessWidget {
   }
 
   void _abrirModal(BuildContext context) {
+    final c = context.cores;
+
     double tempMin = precoMin.clamp(0.0, precoMaxAbsoluto);
     double tempMax = precoMax.clamp(tempMin, precoMaxAbsoluto);
 
@@ -809,8 +843,8 @@ class _FiltroPrecoRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Faixa de Preço',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kPrimary)),
+                Text('Faixa de Preço',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: c.marca)),
                 const SizedBox(height: 12),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text(fmt2.format(tempMin), style: const TextStyle(fontSize: 12)),
@@ -823,8 +857,8 @@ class _FiltroPrecoRow extends StatelessWidget {
                   divisions: precoMaxAbsoluto > 0
                       ? (precoMaxAbsoluto / 100).ceil().clamp(1, 100)
                       : 1,
-                  activeColor: _kPrimary,
-                  inactiveColor: _kPrimary.withOpacity(0.15),
+                  activeColor: c.marca,
+                  inactiveColor: c.marca.withValues(alpha: 0.15),
                   onChanged: (v) {
                     setModal(() {
                       tempMin = v.start;
@@ -836,12 +870,12 @@ class _FiltroPrecoRow extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
+                    style: ElevatedButton.styleFrom(backgroundColor: c.marcaBotao),
                     onPressed: () {
                       onChanged(tempMin, tempMax);
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Aplicar', style: TextStyle(color: Colors.white)),
+                    child: const Text('Aplicar', style: TextStyle(color: AppColors.branco)),
                   ),
                 ),
               ],

@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_sidebar.dart';
 import 'package:http/http.dart' as http;
 import 'package:api_compartilhado/api_config.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ── Cores ─────────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão / chip seleccionado)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho da tabela)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo), context.cores.acentoTexto (texto/ícone),
+//                  context.cores.perigo (mensagens de erro)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho) / context.cores.superficie (fundos)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   Colors.green → context.cores.sucesso | Colors.orange → context.cores.aviso
 
 enum _FiltroCredito {
   todos,
@@ -87,114 +94,116 @@ class _PedidosCreditoScreenState extends State<PedidosCreditoScreen> {
   }
 
   Future<bool> _confirmarEntradaEdicaoCredito(PedidoModel pedido) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          title: const Text(
-            'Editar dívida',
-            style: TextStyle(
-              color: _kAzul,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                pedido.referencia,
-                style: const TextStyle(
-                  color: _kAzul,
-                  fontWeight: FontWeight.w800,
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) {
+            final c = ctx.cores;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              title: Text(
+                'Editar dívida',
+                style: TextStyle(
+                  color: c.marca,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'Vai entrar no modo de edição deste pedido a crédito.',
-                style: TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Todos os produtos ou serviços adicionados no catálogo serão anexados a esta dívida.',
-                style: TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.amber.withOpacity(0.35),
-                  ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      size: 20,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pedido.referencia,
+                    style: TextStyle(
+                      color: c.marca,
+                      fontWeight: FontWeight.w800,
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Use esta opção apenas quando quiser acrescentar novos itens à dívida.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _kCinzaTexto,
-                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Vai entrar no modo de edição deste pedido a crédito.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Todos os produtos ou serviços adicionados no catálogo serão anexados a esta dívida.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.35),
                       ),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: c.aviso,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Use esta opção apenas quando quiser acrescentar novos itens à dívida.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: c.textoSecundario,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(ctx, true),
-              icon: const Icon(Icons.edit_note_rounded),
-              label: const Text('Entrar em edição'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ) ??
-      false;
-}
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  icon: const Icon(Icons.edit_note_rounded),
+                  label: const Text('Entrar em edição'),
+                  style: ElevatedButton.styleFrom(
+                    // fixo de propósito: fundo âmbar + texto branco
+                    backgroundColor: Colors.amber[700],
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
 
-Future<void> _editarPedidoCredito(PedidoModel pedido) async {
-  final confirmar = await _confirmarEntradaEdicaoCredito(pedido);
+  Future<void> _editarPedidoCredito(PedidoModel pedido) async {
+    final confirmar = await _confirmarEntradaEdicaoCredito(pedido);
 
-  if (!confirmar) return;
+    if (!confirmar) return;
 
-  final provider = context.read<PedidoProvider>();
+    final provider = context.read<PedidoProvider>();
 
-  // Busca versão completa/actualizada com itens
-  final atualizado = await provider.buscarPorId(pedido.idPedido);
-  final pedidoParaEditar = atualizado ?? pedido;
+    // Busca versão completa/actualizada com itens
+    final atualizado = await provider.buscarPorId(pedido.idPedido);
+    final pedidoParaEditar = atualizado ?? pedido;
 
-  provider.definirPedidoActual(pedidoParaEditar);
-  PedidoAtivoController.instance.definirEdicaoCredito(pedidoParaEditar);
+    provider.definirPedidoActual(pedidoParaEditar);
+    PedidoAtivoController.instance.definirEdicaoCredito(pedidoParaEditar);
 
-  await Navigator.of(context).pushNamed('/catalogo');
+    await Navigator.of(context).pushNamed('/catalogo');
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  await _carregar();
-}
-
-
+    await _carregar();
+  }
 
   List<PedidoModel> _filtrar(List<PedidoModel> pedidos) {
     var lista = pedidos.where((p) => p.ehCredito).toList();
@@ -247,9 +256,10 @@ Future<void> _editarPedidoCredito(PedidoModel pedido) async {
   Widget build(BuildContext context) {
     final provider = context.watch<PedidoProvider>();
     final pedidos = _filtrar(provider.pedidosEmDivida);
+    final c = context.cores;
 
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/pedidos_credito'),
       body: Column(
@@ -271,17 +281,17 @@ Future<void> _editarPedidoCredito(PedidoModel pedido) async {
           const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
-              color: _kAzul,
+              color: c.acentoTexto,
               onRefresh: _carregar,
-              child:_ListagemDividas(
-  pedidos: pedidos,
-  carregando: provider.isLoading,
-  erro: _erroLocal,
-  currencyFmt: _currencyFmt,
-  onRecarregar: _carregar,
-  onDetalhes: _abrirDetalhes,
-  onEditar: _editarPedidoCredito,
-),
+              child: _ListagemDividas(
+                pedidos: pedidos,
+                carregando: provider.isLoading,
+                erro: _erroLocal,
+                currencyFmt: _currencyFmt,
+                onRecarregar: _carregar,
+                onDetalhes: _abrirDetalhes,
+                onEditar: _editarPedidoCredito,
+              ),
             ),
           ),
         ],
@@ -291,20 +301,22 @@ Future<void> _editarPedidoCredito(PedidoModel pedido) async {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.credit_score_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -350,8 +362,9 @@ class _BarraPesquisa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
@@ -361,26 +374,26 @@ class _BarraPesquisa extends StatelessWidget {
               onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: 'Pesquisar por referência, ID do pedido ou cliente...',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 13,
-                  color: _kCinzaTexto,
+                  color: c.textoSecundario,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
                 suffixIcon: controller.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: _kCinzaTexto,
+                          color: c.textoSecundario,
                           size: 18,
                         ),
                         onPressed: onLimpar,
                       )
                     : null,
                 filled: true,
-                fillColor: _kCinzaClaro,
+                fillColor: c.fundo,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -392,9 +405,9 @@ class _BarraPesquisa extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             '$total dívida(s)',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: _kCinzaTexto,
+              color: c.textoSecundario,
             ),
           ),
         ],
@@ -419,24 +432,30 @@ class _FiltroStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _kBranco,
+      color: context.cores.superficie,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _chip('Todos', _FiltroCredito.todos, Icons.list_alt_rounded),
-            _chip('Pendentes', _FiltroCredito.pendente, Icons.schedule_rounded),
-            _chip('Parciais', _FiltroCredito.parcial, Icons.paid_outlined),
-            _chip('Vencidos', _FiltroCredito.vencido, Icons.warning_amber_rounded),
-            _chip('Pagos', _FiltroCredito.pago, Icons.check_circle_outline_rounded),
+            _chip(context, 'Todos', _FiltroCredito.todos, Icons.list_alt_rounded),
+            _chip(context, 'Pendentes', _FiltroCredito.pendente, Icons.schedule_rounded),
+            _chip(context, 'Parciais', _FiltroCredito.parcial, Icons.paid_outlined),
+            _chip(context, 'Vencidos', _FiltroCredito.vencido, Icons.warning_amber_rounded),
+            _chip(context, 'Pagos', _FiltroCredito.pago, Icons.check_circle_outline_rounded),
           ],
         ),
       ),
     );
   }
 
-  Widget _chip(String label, _FiltroCredito valor, IconData icon) {
+  Widget _chip(
+    BuildContext context,
+    String label,
+    _FiltroCredito valor,
+    IconData icon,
+  ) {
+    final c = context.cores;
     final ativo = filtro == valor;
 
     return Padding(
@@ -449,21 +468,21 @@ class _FiltroStatus extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: ativo ? _kBranco : _kCinzaTexto,
+              color: ativo ? AppColors.branco : c.textoSecundario,
             ),
             const SizedBox(width: 5),
             Text(label),
           ],
         ),
-        selectedColor: _kAzul,
-        backgroundColor: _kCinzaClaro,
+        selectedColor: c.marcaBotao,
+        backgroundColor: c.fundo,
         labelStyle: TextStyle(
-          color: ativo ? _kBranco : _kCinzaTexto,
+          color: ativo ? AppColors.branco : c.textoSecundario,
           fontSize: 12,
           fontWeight: ativo ? FontWeight.w700 : FontWeight.w500,
         ),
         side: BorderSide(
-          color: ativo ? _kAzul : const Color(0xFFE5E7EB),
+          color: ativo ? c.marcaBotao : c.borda,
         ),
         onSelected: (_) => onChanged(valor),
       ),
@@ -486,6 +505,8 @@ class _ResumoDividas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     final totalFacturado = pedidos.fold<double>(
       0,
       (soma, p) => soma + p.total,
@@ -504,7 +525,7 @@ class _ResumoDividas extends StatelessWidget {
     final vencidos = pedidos.where(_pedidoVencido).length;
 
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
         children: [
@@ -513,7 +534,7 @@ class _ResumoDividas extends StatelessWidget {
               label: 'Facturado',
               valor: currencyFmt.format(totalFacturado),
               icon: Icons.receipt_long_rounded,
-              cor: _kAzul,
+              cor: c.marca,
             ),
           ),
           const SizedBox(width: 10),
@@ -522,7 +543,7 @@ class _ResumoDividas extends StatelessWidget {
               label: 'Pago',
               valor: currencyFmt.format(totalPago),
               icon: Icons.payments_rounded,
-              cor: Colors.green,
+              cor: c.sucesso,
             ),
           ),
           const SizedBox(width: 10),
@@ -531,7 +552,7 @@ class _ResumoDividas extends StatelessWidget {
               label: 'Saldo',
               valor: currencyFmt.format(saldo),
               icon: Icons.account_balance_wallet_outlined,
-              cor: _kVermelho,
+              cor: c.acentoTexto,
             ),
           ),
           const SizedBox(width: 10),
@@ -540,7 +561,7 @@ class _ResumoDividas extends StatelessWidget {
               label: 'Vencidos',
               valor: '$vencidos',
               icon: Icons.warning_amber_rounded,
-              cor: Colors.orange,
+              cor: c.aviso,
             ),
           ),
         ],
@@ -564,15 +585,16 @@ class _ResumoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 10,
         vertical: 10,
       ),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: context.escuro ? 0.14 : 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cor.withOpacity(0.18)),
+        border: Border.all(color: cor.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
@@ -584,8 +606,8 @@ class _ResumoCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: _kCinzaTexto,
+                  style: TextStyle(
+                    color: c.textoSecundario,
                     fontSize: 11,
                   ),
                 ),
@@ -622,21 +644,23 @@ class _ListagemDividas extends StatelessWidget {
   final Future<void> Function(PedidoModel) onDetalhes;
   final Future<void> Function(PedidoModel) onEditar;
 
-const _ListagemDividas({
-  required this.pedidos,
-  required this.carregando,
-  required this.erro,
-  required this.currencyFmt,
-  required this.onRecarregar,
-  required this.onDetalhes,
-  required this.onEditar,
-});
+  const _ListagemDividas({
+    required this.pedidos,
+    required this.carregando,
+    required this.erro,
+    required this.currencyFmt,
+    required this.onRecarregar,
+    required this.onDetalhes,
+    required this.onEditar,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     if (carregando) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kAzul),
+      return Center(
+        child: CircularProgressIndicator(color: c.marca),
       );
     }
 
@@ -644,9 +668,9 @@ const _ListagemDividas({
       return ListView(
         children: [
           const SizedBox(height: 120),
-          const Icon(
+          Icon(
             Icons.error_outline,
-            color: _kVermelho,
+            color: c.perigo,
             size: 48,
           ),
           const SizedBox(height: 12),
@@ -655,7 +679,7 @@ const _ListagemDividas({
             child: Text(
               erro!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.perigo),
             ),
           ),
           const SizedBox(height: 16),
@@ -665,8 +689,8 @@ const _ListagemDividas({
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Tentar novamente'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kAzul,
-                foregroundColor: _kBranco,
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
               ),
             ),
           ),
@@ -676,18 +700,18 @@ const _ListagemDividas({
 
     if (pedidos.isEmpty) {
       return ListView(
-        children: const [
-          SizedBox(height: 120),
+        children: [
+          const SizedBox(height: 120),
           Icon(
             Icons.credit_score_outlined,
-            color: _kCinzaTexto,
+            color: c.desactivado,
             size: 52,
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Center(
             child: Text(
               'Nenhuma dívida encontrada.',
-              style: TextStyle(color: _kCinzaTexto),
+              style: TextStyle(color: c.textoSecundario),
             ),
           ),
         ],
@@ -699,9 +723,12 @@ const _ListagemDividas({
         Container(
           margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: const BoxDecoration(
-            color: _kAzul,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+          decoration: BoxDecoration(
+            // Mesmo critério do cabeçalho de tabelas do tema.
+            color: context.escuro
+                ? AppColors.azulMarcaEscuro
+                : AppColors.azulMarca,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: const Row(
             children: [
@@ -762,7 +789,7 @@ const _ListagemDividas({
                   ),
                 ),
               ),
-SizedBox(width: 130),
+              SizedBox(width: 130),
             ],
           ),
         ),
@@ -770,13 +797,13 @@ SizedBox(width: 130),
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
             itemCount: pedidos.length,
-      itemBuilder: (_, i) => _LinhaDivida(
-  pedido: pedidos[i],
-  isAlternate: i.isOdd,
-  currencyFmt: currencyFmt,
-  onDetalhes: onDetalhes,
-  onEditar: onEditar,
-),
+            itemBuilder: (_, i) => _LinhaDivida(
+              pedido: pedidos[i],
+              isAlternate: i.isOdd,
+              currencyFmt: currencyFmt,
+              onDetalhes: onDetalhes,
+              onEditar: onEditar,
+            ),
           ),
         ),
       ],
@@ -795,13 +822,13 @@ class _LinhaDivida extends StatefulWidget {
   final Future<void> Function(PedidoModel) onDetalhes;
   final Future<void> Function(PedidoModel) onEditar;
 
-const _LinhaDivida({
-  required this.pedido,
-  required this.isAlternate,
-  required this.currencyFmt,
-  required this.onDetalhes,
-  required this.onEditar,
-});
+  const _LinhaDivida({
+    required this.pedido,
+    required this.isAlternate,
+    required this.currencyFmt,
+    required this.onDetalhes,
+    required this.onEditar,
+  });
 
   @override
   State<_LinhaDivida> createState() => _LinhaDividaState();
@@ -846,6 +873,7 @@ class _LinhaDividaState extends State<_LinhaDivida> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final saldo = p.saldoDevedorCalculado;
     final vencido = _pedidoVencido(p);
     final progresso =
@@ -853,9 +881,9 @@ class _LinhaDividaState extends State<_LinhaDivida> {
 
     return Container(
       decoration: BoxDecoration(
-        color: widget.isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0)),
+        color: widget.isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(
+          bottom: BorderSide(color: c.borda),
         ),
       ),
       child: Padding(
@@ -864,10 +892,10 @@ class _LinhaDividaState extends State<_LinhaDivida> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: _kAzul.withOpacity(0.12),
-              child: const Icon(
+              backgroundColor: c.marca.withValues(alpha: 0.12),
+              child: Icon(
                 Icons.receipt_long_rounded,
-                color: _kAzul,
+                color: c.marca,
                 size: 18,
               ),
             ),
@@ -882,18 +910,21 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                     p.referencia,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: _kAzul,
+                      color: c.marca,
                     ),
                   ),
                   const SizedBox(height: 2),
                   if (_carregandoCliente)
-                    const SizedBox(
+                    SizedBox(
                       height: 12,
                       width: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: c.marca,
+                      ),
                     )
                   else
                     Text(
@@ -903,9 +934,9 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                               : 'Cliente não informado'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: _kCinzaTexto,
+                        color: c.textoSecundario,
                       ),
                     ),
                   const SizedBox(height: 4),
@@ -930,8 +961,8 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                 style: TextStyle(
                   fontSize: 12,
                   color: p.idDocumentoFacturaCredito != null
-                      ? _kAzul
-                      : Colors.orange,
+                      ? c.marca
+                      : c.aviso,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -946,9 +977,9 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                     widget.currencyFmt.format(p.total),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: _kAzul,
+                      color: c.marca,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -957,9 +988,9 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                     'Pago: ${widget.currencyFmt.format(p.valorPago)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: _kCinzaTexto,
+                      color: c.textoSecundario,
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -968,8 +999,8 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                     child: LinearProgressIndicator(
                       value: progresso,
                       minHeight: 5,
-                      backgroundColor: _kCinzaClaro,
-                      color: progresso >= 1 ? Colors.green : _kAzul,
+                      backgroundColor: c.borda,
+                      color: progresso >= 1 ? c.sucesso : c.marca,
                     ),
                   ),
                 ],
@@ -984,7 +1015,7 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: saldo <= 0 ? Colors.green : _kVermelho,
+                  color: saldo <= 0 ? c.sucesso : c.acentoTexto,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -998,64 +1029,64 @@ class _LinhaDividaState extends State<_LinhaDivida> {
                 children: [
                   _BadgeStatus(
                     label: _statusLabel(p),
-                    color: _statusColor(p),
+                    color: _statusColor(c, p),
                   ),
                   if (vencido)
-                    const _BadgeStatus(
+                    _BadgeStatus(
                       label: 'Vencido',
-                      color: Colors.orange,
+                      color: c.aviso,
                     ),
                 ],
               ),
             ),
 
             SizedBox(
-  width: 130,
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    children: [
-      Tooltip(
-        message: 'Editar pedido a crédito',
-        child: InkWell(
-          onTap: () => widget.onEditar(p),
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(6),
+              width: 130,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Tooltip(
+                    message: 'Editar pedido a crédito',
+                    child: InkWell(
+                      onTap: () => widget.onEditar(p),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: c.aviso.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 17,
+                          color: c.aviso,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'Ver detalhes da dívida',
+                    child: InkWell(
+                      onTap: () => widget.onDetalhes(p),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: c.marca.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.visibility_outlined,
+                          size: 17,
+                          color: c.marca,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Icon(
-              Icons.edit_outlined,
-              size: 17,
-              color: Colors.orange,
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Tooltip(
-        message: 'Ver detalhes da dívida',
-        child: InkWell(
-          onTap: () => widget.onDetalhes(p),
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: _kAzul.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.visibility_outlined,
-              size: 17,
-              color: _kAzul,
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-),
           ],
         ),
       ),
@@ -1074,15 +1105,16 @@ class _MiniInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     return Row(
       children: [
-        Icon(icon, size: 11, color: _kCinzaTexto),
+        Icon(icon, size: 11, color: c.textoSecundario),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
-            color: _kCinzaTexto,
+            color: c.textoSecundario,
           ),
         ),
       ],
@@ -1104,9 +1136,9 @@ class _BadgeStatus extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: context.escuro ? 0.16 : 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -1154,16 +1186,18 @@ String _statusLabel(PedidoModel pedido) {
   }
 }
 
-Color _statusColor(PedidoModel pedido) {
+/// Recebe as cores do tema (em vez de constantes fixas) para funcionar
+/// nos modos claro e escuro: `_statusColor(context.cores, pedido)`.
+Color _statusColor(AppColors c, PedidoModel pedido) {
   switch (pedido.statusPagamento.toUpperCase()) {
     case 'PAGO':
-      return Colors.green;
+      return c.sucesso;
     case 'PARCIAL':
-      return _kAzul;
+      return c.marca;
     case 'PENDENTE':
-      return _kVermelho;
+      return c.acentoTexto;
     default:
-      return _kCinzaTexto;
+      return c.textoSecundario;
   }
 }
 

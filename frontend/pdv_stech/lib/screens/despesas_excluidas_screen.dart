@@ -1,13 +1,22 @@
+// lib/screens/despesas_excluidas_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 import '/widgets/app_sidebar.dart';
+import '../theme/app_theme.dart';
 
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho de tabela)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: ícone da AppBar; texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//                  context.cores.perigo (mensagem de erro de carregamento)
+//   _kBranco     → AppColors.branco (sobre fundos coloridos)
+//                  context.cores.superficie (barra de informação)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
 
 class DespesasExcluidasScreen extends StatefulWidget {
   const DespesasExcluidasScreen({super.key});
@@ -29,25 +38,28 @@ class _DespesasExcluidasScreenState extends State<DespesasExcluidasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<DespesaProvider>();
 
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: AppBar(
-        backgroundColor: _kAzul,
-        foregroundColor: _kBranco,
+        // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+        backgroundColor:
+            context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+        foregroundColor: AppColors.branco,
         elevation: 0,
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: _kVermelho,
+                color: AppColors.vermelhoMarca,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.delete_sweep_rounded,
-                color: _kBranco,
+                color: AppColors.branco,
                 size: 20,
               ),
             ),
@@ -72,18 +84,17 @@ class _DespesasExcluidasScreenState extends State<DespesasExcluidasScreen> {
       body: Column(
         children: [
           Container(
-            color: _kBranco,
+            color: c.superficie,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded,
-                    color: _kAzul, size: 20),
+                Icon(Icons.info_outline_rounded, color: c.marca, size: 20),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Histórico de despesas removidas e os seus motivos.',
                     style: TextStyle(
-                      color: _kCinzaTexto,
+                      color: c.textoSecundario,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -91,14 +102,14 @@ class _DespesasExcluidasScreenState extends State<DespesasExcluidasScreen> {
                 ),
                 Text(
                   '${provider.despesas.length} excluída(s)',
-                  style: const TextStyle(fontSize: 13, color: _kCinzaTexto),
+                  style: TextStyle(fontSize: 13, color: c.textoSecundario),
                 ),
                 const SizedBox(width: 16),
                 Text(
                   'Total: ${provider.totalDespesas.toStringAsFixed(2)} MZN',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: _kAzul,
+                    color: c.marca,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -124,8 +135,10 @@ class _ListagemDespesasExcluidas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     if (provider.carregando) {
-      return const Center(child: CircularProgressIndicator(color: _kAzul));
+      return Center(child: CircularProgressIndicator(color: c.marca));
     }
 
     if (provider.temErro) {
@@ -133,7 +146,7 @@ class _ListagemDespesasExcluidas extends StatelessWidget {
         child: Text(
           provider.erro!,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _kVermelho),
+          style: TextStyle(color: c.perigo),
         ),
       );
     }
@@ -141,15 +154,16 @@ class _ListagemDespesasExcluidas extends StatelessWidget {
     final lista = provider.despesas;
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.delete_sweep_outlined, color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+            Icon(Icons.delete_sweep_outlined,
+                color: c.textoSecundario, size: 48),
+            const SizedBox(height: 12),
             Text(
               'Nenhuma despesa excluída encontrada.',
-              style: TextStyle(color: _kCinzaTexto),
+              style: TextStyle(color: c.textoSecundario),
             ),
           ],
         ),
@@ -158,11 +172,12 @@ class _ListagemDespesasExcluidas extends StatelessWidget {
 
     return Column(
       children: [
+        // Cabeçalho de tabela: azulMarca FIXO + texto branco (igual nos dois temas).
         Container(
           margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: const BoxDecoration(
-            color: _kAzul,
+            color: AppColors.azulMarca,
             borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: const Row(
@@ -204,6 +219,7 @@ class _LinhaDespesaExcluida extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final data = despesa.dataDespesa;
     final dataTexto = data == null
         ? '—'
@@ -211,8 +227,8 @@ class _LinhaDespesaExcluida extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFE8EAF0))),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(bottom: BorderSide(color: c.borda)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -220,10 +236,11 @@ class _LinhaDespesaExcluida extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: _kVermelho.withOpacity(0.12),
-              child: const Icon(
+              backgroundColor:
+                  c.acentoTexto.withValues(alpha: context.escuro ? 0.18 : 0.12),
+              child: Icon(
                 Icons.delete_outline_rounded,
-                color: _kVermelho,
+                color: c.acentoTexto,
                 size: 18,
               ),
             ),
@@ -234,10 +251,10 @@ class _LinhaDespesaExcluida extends StatelessWidget {
                 despesa.descricao,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
             ),
@@ -249,9 +266,9 @@ class _LinhaDespesaExcluida extends StatelessWidget {
                     : 'Sem tipo',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: _kCinzaTexto,
+                  color: c.textoSecundario,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -264,16 +281,16 @@ class _LinhaDespesaExcluida extends StatelessWidget {
                     : 'Sem fornecedor',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
             Expanded(
               flex: 2,
               child: Text(
                 '${despesa.valorGasto.toStringAsFixed(2)} MZN',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: _kAzul,
+                  color: c.marca,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -282,7 +299,7 @@ class _LinhaDespesaExcluida extends StatelessWidget {
               flex: 2,
               child: Text(
                 dataTexto,
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
             Expanded(
@@ -293,9 +310,9 @@ class _LinhaDespesaExcluida extends StatelessWidget {
                     : 'Sem motivo informado',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: _kCinzaTexto,
+                  color: c.textoSecundario,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -317,7 +334,7 @@ class _HeaderText extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: Colors.white,
+        color: AppColors.branco,
         fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
