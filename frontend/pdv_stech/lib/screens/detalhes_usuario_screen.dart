@@ -3,13 +3,34 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../theme/app_theme.dart';
 
-// ── Paleta STech ────────────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) e as cores Colors.green/red/grey/orange/teal.* foram
+// substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone)
+//                  context.cores.marcaBotao (fundo de snackbar)
+//                  AppColors.azulMarca / azulMarcaEscuro (SliverAppBar/hero)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: avatar, badge, botão;
+//                  texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone/borda)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   green/orange → context.cores.sucesso / aviso (+ Fundo)
+//   grey.*       → context.cores.borda / desactivado
+//
+// O HERO (gradiente azul) é escuro nos dois temas, por isso o seu conteúdo
+// (texto branco, avatar vermelho, indicador de status) permanece fixo.
+
+/// Botão "Activar": verde escuro no tema escuro (texto branco com bom contraste).
+Color _corAtivar(BuildContext context) =>
+    context.escuro ? const Color(0xFF2E7D32) : Colors.green.shade600;
+
+/// Botão "Desactivar": vermelho da marca no tema escuro.
+Color _corDesativar(BuildContext context) =>
+    context.escuro ? AppColors.vermelhoMarca : Colors.red.shade600;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -21,9 +42,10 @@ class DetalhesUsuarioScreen extends StatelessWidget {
     // Recebe o UsuarioModel via Navigator.arguments
     final usuario =
         ModalRoute.of(context)!.settings.arguments as UsuarioModel;
+    final c = context.cores;
 
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       body: CustomScrollView(
         slivers: [
           _HeroAppBar(usuario: usuario),
@@ -65,8 +87,10 @@ class _HeroAppBar extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded),
         onPressed: () => Navigator.of(context).pop(),
@@ -77,11 +101,13 @@ class _HeroAppBar extends StatelessWidget {
           children: [
             // Fundo gradiente
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF1B2A6B), Color(0xFF0D1A45)],
+                  colors: context.escuro
+                      ? const [AppColors.azulMarcaEscuro, Color(0xFF080C26)]
+                      : const [Color(0xFF1B2A6B), Color(0xFF0D1A45)],
                 ),
               ),
             ),
@@ -94,7 +120,7 @@ class _HeroAppBar extends StatelessWidget {
                 height: 180,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kVermelho.withOpacity(0.08),
+                  color: AppColors.vermelhoMarca.withValues(alpha: 0.08),
                 ),
               ),
             ),
@@ -106,7 +132,7 @@ class _HeroAppBar extends StatelessWidget {
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kBranco.withOpacity(0.04),
+                  color: AppColors.branco.withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -123,13 +149,13 @@ class _HeroAppBar extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundColor: _kVermelho,
+                          backgroundColor: AppColors.vermelhoMarca,
                           child: Text(
                             initials,
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: _kBranco,
+                              color: AppColors.branco,
                             ),
                           ),
                         ),
@@ -144,8 +170,8 @@ class _HeroAppBar extends StatelessWidget {
                                   ? Colors.green.shade400
                                   : Colors.grey.shade400,
                               shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: _kBranco, width: 2.5),
+                              border: Border.all(
+                                  color: AppColors.branco, width: 2.5),
                             ),
                           ),
                         ),
@@ -162,7 +188,7 @@ class _HeroAppBar extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
-                              color: _kBranco,
+                              color: AppColors.branco,
                               letterSpacing: 0.2,
                             ),
                           ),
@@ -172,7 +198,8 @@ class _HeroAppBar extends StatelessWidget {
                               '@${usuario.apelido}',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _kBranco.withOpacity(0.65),
+                                color:
+                                    AppColors.branco.withValues(alpha: 0.65),
                               ),
                             ),
                           const SizedBox(height: 6),
@@ -263,6 +290,7 @@ class _CardStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final ativo = usuario.ativo;
 
     return _Card(
@@ -273,10 +301,8 @@ class _CardStatus extends StatelessWidget {
           children: [
             Expanded(
               child: _StatBox(
-                cor: ativo ? Colors.green.shade600 : Colors.grey.shade500,
-                fundo: ativo
-                    ? Colors.green.shade50
-                    : Colors.grey.shade100,
+                cor: ativo ? c.sucesso : c.textoSecundario,
+                fundo: ativo ? c.sucessoFundo : c.borda,
                 icone: ativo
                     ? Icons.check_circle_rounded
                     : Icons.cancel_rounded,
@@ -289,8 +315,8 @@ class _CardStatus extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _StatBox(
-                cor: _kAzul,
-                fundo: _kAzul.withOpacity(0.06),
+                cor: c.marca,
+                fundo: c.marca.withValues(alpha: context.escuro ? 0.12 : 0.06),
                 icone: Icons.shield_outlined,
                 titulo: usuario.nomePerfil,
                 descricao: 'Perfil de acesso',
@@ -309,6 +335,8 @@ class _CardProdutividade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     // Métricas fictícias — substituir por dados reais da API quando disponível
     final totalVendas   = 0;
     final vendasHoje    = 0;
@@ -325,7 +353,7 @@ class _CardProdutividade extends StatelessWidget {
                 icone: Icons.receipt_long_rounded,
                 valor: '$totalVendas',
                 label: 'Vendas totais',
-                cor: _kAzul,
+                cor: c.marca,
               ),
             ),
             const SizedBox(width: 12),
@@ -334,7 +362,9 @@ class _CardProdutividade extends StatelessWidget {
                 icone: Icons.today_rounded,
                 valor: '$vendasHoje',
                 label: 'Vendas hoje',
-                cor: Colors.teal.shade600,
+                cor: context.escuro
+                    ? Colors.teal.shade300
+                    : Colors.teal.shade600,
               ),
             ),
             const SizedBox(width: 12),
@@ -343,7 +373,7 @@ class _CardProdutividade extends StatelessWidget {
                 icone: Icons.attach_money_rounded,
                 valor: 'MT ${ticketMedio.toStringAsFixed(0)}',
                 label: 'Ticket médio',
-                cor: Colors.orange.shade700,
+                cor: context.escuro ? c.aviso : Colors.orange.shade700,
               ),
             ),
           ],
@@ -352,13 +382,13 @@ class _CardProdutividade extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _kCinzaClaro,
+            color: c.fundo,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
               Icon(Icons.info_outline_rounded,
-                  color: _kCinzaTexto, size: 16),
+                  color: c.textoSecundario, size: 16),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -367,7 +397,7 @@ class _CardProdutividade extends StatelessWidget {
                   'deste usuário estiver disponível.',
                   style: TextStyle(
                       fontSize: 12,
-                      color: _kCinzaTexto,
+                      color: c.textoSecundario,
                       height: 1.4),
                 ),
               ),
@@ -385,6 +415,9 @@ class _CardSeguranca extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     // primeiraSenha pode estar no model (se campo adicionado)
     final bool primeiraSenha =
         (usuario as dynamic).primeiraSenha as bool? ?? false;
@@ -397,21 +430,26 @@ class _CardSeguranca extends StatelessWidget {
           icon: Icons.lock_outline_rounded,
           label: 'Estado da senha',
           valor: primeiraSenha ? 'Aguarda troca (senha padrão)' : 'Personalizada',
-          corValor: primeiraSenha ? Colors.orange.shade700 : Colors.green.shade700,
+          corValor: primeiraSenha ? c.aviso : c.sucesso,
         ),
         const SizedBox(height: 8),
         if (primeiraSenha)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF3CD),
+              color: escuro ? c.avisoFundo : const Color(0xFFFFF3CD),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFFFCC02)),
+              border: Border.all(
+                color: escuro
+                    ? c.aviso.withValues(alpha: 0.5)
+                    : const Color(0xFFFFCC02),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFF59E0B), size: 18),
+                Icon(Icons.warning_amber_rounded,
+                    color: escuro ? c.aviso : const Color(0xFFF59E0B),
+                    size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -419,7 +457,7 @@ class _CardSeguranca extends StatelessWidget {
                     'Será solicitada a troca no próximo login.',
                     style: TextStyle(
                         fontSize: 12,
-                        color: Colors.orange.shade900,
+                        color: escuro ? c.aviso : Colors.orange.shade900,
                         height: 1.4),
                   ),
                 ),
@@ -437,6 +475,8 @@ class _BotoesAcao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -455,10 +495,9 @@ class _BotoesAcao extends StatelessWidget {
                 fontWeight: FontWeight.w600, fontSize: 15),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: usuario.ativo
-                ? Colors.red.shade600
-                : Colors.green.shade600,
-            foregroundColor: _kBranco,
+            backgroundColor:
+                usuario.ativo ? _corDesativar(context) : _corAtivar(context),
+            foregroundColor: AppColors.branco,
             padding: const EdgeInsets.symmetric(vertical: 14),
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -475,8 +514,8 @@ class _BotoesAcao extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: _kVermelho,
-            side: const BorderSide(color: _kVermelho),
+            foregroundColor: c.acentoTexto,
+            side: BorderSide(color: c.acentoTexto),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
@@ -493,7 +532,7 @@ class _BotoesAcao extends StatelessWidget {
       builder: (_) => _Dialogo(
         titulo: '${acao[0].toUpperCase()}${acao.substring(1)} usuário',
         mensagem: 'Tem certeza que deseja $acao ${usuario.nome}?',
-        corBotao: usuario.ativo ? _kVermelho : Colors.green.shade600,
+        corBotao: usuario.ativo ? _corDesativar(ctx) : _corAtivar(ctx),
         label: acao[0].toUpperCase() + acao.substring(1),
       ),
     );
@@ -511,17 +550,21 @@ class _BotoesAcao extends StatelessWidget {
         mensagem:
             'A senha será redefinida para "12345678". O usuário precisará '
             'alterá-la no próximo login. Confirmar?',
-        corBotao: _kVermelho,
+        corBotao: AppColors.vermelhoMarca,
         label: 'Resetar',
       ),
     );
     if (ok == true && ctx.mounted) {
       await ctx.read<UsuarioProvider>().resetarSenha(usuario.id);
       if (ctx.mounted) {
+        // Texto branco explícito: no tema escuro herdaria `textoPrincipal`.
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-            content: Text('Senha redefinida com sucesso.'),
-            backgroundColor: _kAzul,
+          SnackBar(
+            content: const Text(
+              'Senha redefinida com sucesso.',
+              style: TextStyle(color: AppColors.branco),
+            ),
+            backgroundColor: ctx.cores.marcaBotao,
           ),
         );
       }
@@ -546,11 +589,14 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -559,17 +605,17 @@ class _Card extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: _kVermelho, size: 18),
+                Icon(icon, color: c.acentoTexto, size: 18),
                 const SizedBox(width: 8),
                 Text(titulo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: _kAzul,
+                      color: c.marca,
                       letterSpacing: 0.4,
                     )),
                 const SizedBox(width: 10),
-                Expanded(child: Divider(color: Colors.grey.shade200)),
+                Expanded(child: Divider(color: c.borda)),
               ],
             ),
             const SizedBox(height: 14),
@@ -596,19 +642,21 @@ class _ItemInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _kCinzaTexto, size: 17),
+          Icon(icon, color: c.textoSecundario, size: 17),
           const SizedBox(width: 10),
           SizedBox(
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
-                  fontSize: 13, color: _kCinzaTexto),
+              style: TextStyle(
+                  fontSize: 13, color: c.textoSecundario),
             ),
           ),
           Expanded(
@@ -617,7 +665,7 @@ class _ItemInfo extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: corValor ?? _kAzul,
+                color: corValor ?? c.marca,
               ),
             ),
           ),
@@ -644,6 +692,8 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -660,8 +710,8 @@ class _StatBox extends StatelessWidget {
           const SizedBox(height: 2),
           Text(descricao,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 11, color: _kCinzaTexto)),
+              style: TextStyle(
+                  fontSize: 11, color: c.textoSecundario)),
         ],
       ),
     );
@@ -683,10 +733,12 @@ class _MetricaBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.07),
+        color: cor.withValues(alpha: context.escuro ? 0.14 : 0.07),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -701,14 +753,16 @@ class _MetricaBox extends StatelessWidget {
           const SizedBox(height: 2),
           Text(label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 11, color: _kCinzaTexto)),
+              style: TextStyle(
+                  fontSize: 11, color: c.textoSecundario)),
         ],
       ),
     );
   }
 }
 
+/// Usado apenas sobre o hero (gradiente azul escuro nos dois temas),
+/// por isso permanece com cores fixas.
 class _BadgePerfil extends StatelessWidget {
   final String perfil;
   const _BadgePerfil({required this.perfil});
@@ -718,7 +772,7 @@ class _BadgePerfil extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _kVermelho.withOpacity(0.18),
+        color: AppColors.vermelhoMarca.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -726,7 +780,7 @@ class _BadgePerfil extends StatelessWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: _kBranco,
+          color: AppColors.branco,
           letterSpacing: 0.5,
         ),
       ),
@@ -749,25 +803,27 @@ class _Dialogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return AlertDialog(
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: Text(titulo,
-          style: const TextStyle(
-              fontWeight: FontWeight.w700, color: _kAzul, fontSize: 17)),
+          style: TextStyle(
+              fontWeight: FontWeight.w700, color: c.marca, fontSize: 17)),
       content: Text(mensagem,
-          style: const TextStyle(fontSize: 14, color: _kCinzaTexto)),
+          style: TextStyle(fontSize: 14, color: c.textoSecundario)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar',
-              style: TextStyle(color: _kCinzaTexto)),
+          child: Text('Cancelar',
+              style: TextStyle(color: c.textoSecundario)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: ElevatedButton.styleFrom(
             backgroundColor: corBotao,
-            foregroundColor: _kBranco,
+            foregroundColor: AppColors.branco,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8)),
           ),

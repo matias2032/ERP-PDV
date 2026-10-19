@@ -2,15 +2,34 @@
 
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../theme/app_theme.dart';
 
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_navy, _red, _bg, _border) e as cores hardcoded
+// (Colors.white, 0xFF111827, 0xFF9CA3AF, 0xFFEEF2FF…) foram substituídas
+// pelo tema:
+//   _navy   → AppColors.azulMarca / azulMarcaEscuro (header)
+//             context.cores.marcaBotao (avatar do chip)
+//             context.cores.marca (borda de foco, textos/ícones azuis)
+//   _red    → AppColors.vermelhoMarca (fundo: botão, snackbar, badge)
+//             context.cores.acentoTexto (vermelho como texto/borda/barra)
+//   _bg     → context.cores.fundo
+//   _border → context.cores.borda (divisores, barra inativa, chip)
+//             _bordaCampo() (borda dos campos)
+//   Colors.white (cards) → context.cores.superficie
+//   0xFF111827 / 0xFF374151 → context.cores.textoPrincipal
+//   0xFF6B7280              → context.cores.textoSecundario
+//   verde / âmbar           → context.cores.sucesso / aviso (tema escuro)
+//   caixa de requisitos     → claro: cores índigo originais | escuro: marca
+//
+// O HEADER (azul) é escuro nos dois temas, por isso o seu conteúdo (badge,
+// título e subtítulo) permanece fixo.
 
-// ──────────────────────────────────────────────
-// Paleta STech
-// ──────────────────────────────────────────────
-const _navy   = Color(0xFF1B2A6B);
-const _red    = Color(0xFFC8102E);
-const _bg     = Color(0xFFF4F5F7);
-const _border = Color(0xFFE2E5ED);
+/// Borda dos campos. Claro: cinza-azulado original.
+/// Escuro: `outline` do tema (contraste 3.7:1 sobre a superfície).
+Color _bordaCampo(BuildContext context) => context.escuro
+    ? Theme.of(context).colorScheme.outline
+    : const Color(0xFFE2E5ED);
 
 class PrimeiraTrocaSenhaScreen extends StatefulWidget {
   const PrimeiraTrocaSenhaScreen({super.key});
@@ -85,13 +104,16 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
   }
 
   Color get _strengthColor {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     switch (_strength) {
       case 0:
-      case 1: return _red;
-      case 2: return const Color(0xFFF59E0B);
+      case 1: return c.acentoTexto;
+      case 2: return escuro ? c.aviso : const Color(0xFFF59E0B);
       case 3:
-      case 4: return const Color(0xFF10B981);
-      default: return _border;
+      case 4: return escuro ? c.sucesso : const Color(0xFF10B981);
+      default: return c.borda;
     }
   }
 
@@ -110,11 +132,16 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
 
       if (!sucesso) throw Exception('Falha ao actualizar a senha.');
 
+      // Fundo colorido FIXO + texto branco explícito: sem isso, no tema
+      // escuro o texto herdaria `textoPrincipal` (claro) e perderia contraste.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Senha alterada com sucesso. Faça login novamente.'),
-            backgroundColor: Color(0xFF10B981),
+            content: Text(
+              'Senha alterada com sucesso. Faça login novamente.',
+              style: TextStyle(color: AppColors.branco),
+            ),
+            backgroundColor: Color(0xFF2E7D32),
             duration: Duration(seconds: 2),
           ),
         );
@@ -128,8 +155,11 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: $e'),
-            backgroundColor: _red,
+            content: Text(
+              'Erro: $e',
+              style: const TextStyle(color: AppColors.branco),
+            ),
+            backgroundColor: AppColors.vermelhoMarca,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -142,12 +172,13 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
   // ── UI ──────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final usuario = SessaoService.instance.usuario;     // ✅ getter correcto
 
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: c.fundo,
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -182,7 +213,8 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(32, 30, 32, 52),
       decoration: BoxDecoration(
-        color: _navy,
+        // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+        color: context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -191,9 +223,10 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: _red.withOpacity(.15),
+              color: AppColors.vermelhoMarca.withValues(alpha: .15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _red.withOpacity(.3)),
+              border: Border.all(
+                  color: AppColors.vermelhoMarca.withValues(alpha: .3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -228,7 +261,7 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
             'Por segurança, crie uma senha pessoal',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(.5),
+              color: Colors.white.withValues(alpha: .5),
             ),
           ),
         ],
@@ -238,6 +271,7 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
 
   // ── chip do utilizador (sobreposto) ──────────
   Widget _buildUserChip(usuario) {
+    final c = context.cores;
     final iniciais = _initials(usuario?.nome, usuario?.apelido);
     return Transform.translate(
       offset: const Offset(0, -20),
@@ -246,9 +280,9 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: c.superficie,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _border),
+            border: Border.all(color: c.borda),
           ),
           child: Row(
             children: [
@@ -256,7 +290,7 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _navy,
+                  color: c.marcaBotao,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -276,17 +310,17 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
                 children: [
                   Text(
                     usuario?.nome ?? 'Utilizador',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: c.textoPrincipal,
                     ),
                   ),
                   Text(
                     usuario?.nomePerfil ?? '',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF6B7280),
+                      color: c.textoSecundario,
                     ),
                   ),
                 ],
@@ -300,14 +334,17 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
 
   // ── formulário ───────────────────────────────
   Widget _buildFormCard(usuario) {
+    final c = context.cores;
+
     return Transform.translate(
       offset: const Offset(0, -12),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: c.superficie,
+          borderRadius:
+              const BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,15 +395,22 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
     required VoidCallback onToggle,
     FormFieldValidator<String>? validator,
   }) {
+    final c = context.cores;
+    final borda = _bordaCampo(context);
+
+    // Claro: cinza original. Escuro: textoSecundario (legível sobre o campo).
+    final cinzaIcone =
+        context.escuro ? c.textoSecundario : const Color(0xFF9CA3AF);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF374151),
+            color: c.textoPrincipal,
             letterSpacing: .5,
           ),
         ),
@@ -375,47 +419,46 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
           controller:  controller,
           obscureText: obscure,
           validator:   validator,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+          style: TextStyle(fontSize: 14, color: c.textoPrincipal),
           decoration: InputDecoration(
             hintText:  'Mínimo 8 caracteres',
-            hintStyle: const TextStyle(
-                color: Color(0xFF9CA3AF), fontSize: 13),
-            prefixIcon: const Icon(
+            hintStyle: TextStyle(color: cinzaIcone, fontSize: 13),
+            prefixIcon: Icon(
                 Icons.lock_outline_rounded,
                 size: 18,
-                color: Color(0xFF9CA3AF)),
+                color: cinzaIcone),
             suffixIcon: IconButton(
               icon: Icon(
                 obscure
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: const Color(0xFF9CA3AF),
+                color: cinzaIcone,
               ),
               onPressed: onToggle,
             ),
             filled:         true,
-            fillColor:      const Color(0xFFF8F9FB),
+            fillColor:      c.superficieAlt,
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _border),
+              borderSide: BorderSide(color: borda),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _border),
+              borderSide: BorderSide(color: borda),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _navy, width: 1.5),
+              borderSide: BorderSide(color: c.marca, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _red),
+              borderSide: BorderSide(color: c.acentoTexto),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _red, width: 1.5),
+              borderSide: BorderSide(color: c.acentoTexto, width: 1.5),
             ),
           ),
         ),
@@ -425,6 +468,8 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
 
   // ── barra de força ───────────────────────────
   Widget _buildStrengthBar() {
+    final c = context.cores;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -436,7 +481,7 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
                 margin: EdgeInsets.only(left: i == 0 ? 0 : 4),
                 height: 3,
                 decoration: BoxDecoration(
-                  color: active ? _strengthColor : _border,
+                  color: active ? _strengthColor : c.borda,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -460,28 +505,37 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
 
   // ── caixa de requisitos ──────────────────────
   Widget _buildRequirements() {
+    final c = context.cores;
+    final escuro = context.escuro;
     final senha = _novaSenhaCtrl.text;
+
+    // Claro: índigo original. Escuro: marca do tema.
+    final corTitulo = escuro ? c.marca : const Color(0xFF3730A3);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF2FF),
+        color: escuro ? c.marca.withValues(alpha: 0.12) : const Color(0xFFEEF2FF),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFC7D2FE)),
+        border: Border.all(
+          color: escuro
+              ? c.marca.withValues(alpha: 0.30)
+              : const Color(0xFFC7D2FE),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.shield_outlined,
-                  size: 13, color: Color(0xFF3730A3)),
-              SizedBox(width: 5),
+              Icon(Icons.shield_outlined, size: 13, color: corTitulo),
+              const SizedBox(width: 5),
               Text(
                 'Requisitos',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF3730A3),
+                  color: corTitulo,
                 ),
               ),
             ],
@@ -500,6 +554,14 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
   }
 
   Widget _reqItem(String text, bool ok) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
+    final corIconeOk = escuro ? c.sucesso : const Color(0xFF10B981);
+    final corIconePendente = escuro ? c.marca : const Color(0xFF6366F1);
+    final corTextoOk = escuro ? c.sucesso : const Color(0xFF065F46);
+    final corTextoPendente = escuro ? c.textoSecundario : const Color(0xFF4338CA);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -508,14 +570,14 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
             ok ? Icons.check_circle_outline_rounded
                : Icons.radio_button_unchecked_rounded,
             size: 13,
-            color: ok ? const Color(0xFF10B981) : const Color(0xFF6366F1),
+            color: ok ? corIconeOk : corIconePendente,
           ),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 11,
-              color: ok ? const Color(0xFF065F46) : const Color(0xFF4338CA),
+              color: ok ? corTextoOk : corTextoPendente,
             ),
           ),
         ],
@@ -531,8 +593,9 @@ class _PrimeiraTrocaSenhaScreenState extends State<PrimeiraTrocaSenhaScreen>
       child: ElevatedButton(
         onPressed: _isLoading ? null : _trocarSenha,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _red,
-          disabledBackgroundColor: _red.withOpacity(.6),
+          backgroundColor: AppColors.vermelhoMarca,
+          disabledBackgroundColor:
+              AppColors.vermelhoMarca.withValues(alpha: .6),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(

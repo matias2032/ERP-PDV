@@ -1,11 +1,28 @@
+// lib/screens/alterar_senha_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 
-const _kPrimary    = Color.fromARGB(255, 27, 42, 107);
-const _kAccent     = Color.fromARGB(255, 200, 16, 46);
-const _kBackground = Color(0xFFF4F5F7);
-const _kCardBg     = Colors.white;
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kPrimary, _kAccent, _kBackground, _kCardBg — nenhuma
+// delas era usada) e as cores hardcoded (Color.fromARGB, Colors.grey/blue/red/
+// green.*) foram substituídas pelo tema:
+//   azul 1B2A6B  → context.cores.marcaBotao (fundo de botão)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar e header)
+//   vermelho     → AppColors.vermelhoMarca (fundo de snackbar de erro)
+//                  context.cores.acentoTexto (texto/ícone do erro)
+//   Colors.red   → AppColors.vermelhoMarca (snackbar)
+//   Colors.green → verde fixo 0xFF2E7D32 (snackbar; texto branco por cima)
+//   blue.*       → context.cores.infoFundo / info
+//   red.shade50  → context.cores.perigoFundo
+//   grey[50]     → context.cores.superficieAlt (campos e card de requisitos)
+//   grey[300]    → context.cores.borda
+//   grey[600/700]→ context.cores.textoSecundario
+//
+// O HEADER (azul) é escuro nos dois temas, por isso o seu conteúdo (ícone e
+// textos brancos) permanece fixo.
 
 class AlterarSenhaScreen extends StatefulWidget {
   const AlterarSenhaScreen({super.key});
@@ -42,11 +59,16 @@ Future<void> _alterarSenha() async {
 
   if (!_formKey.currentState!.validate()) return;
 
+  // Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  // o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   if (_novaSenhaController.text != _confirmacaoSenhaController.text) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('A nova senha e a confirmação não coincidem.'),
-        backgroundColor: Colors.red,
+        content: Text(
+          'A nova senha e a confirmação não coincidem.',
+          style: TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor: AppColors.vermelhoMarca,
       ),
     );
     return;
@@ -70,8 +92,11 @@ Future<void> _alterarSenha() async {
   if (provider.erro == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Senha alterada com sucesso! Você será deslogado.'),
-        backgroundColor: Colors.green,
+        content: Text(
+          'Senha alterada com sucesso! Você será deslogado.',
+          style: TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor: Color(0xFF2E7D32),
         duration: Duration(seconds: 2),
       ),
     );
@@ -83,8 +108,11 @@ Future<void> _alterarSenha() async {
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(provider.erro!),
-        backgroundColor: Colors.red,
+        content: Text(
+          provider.erro!,
+          style: const TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor: AppColors.vermelhoMarca,
       ),
     );
   }
@@ -92,12 +120,20 @@ Future<void> _alterarSenha() async {
 
   @override
   Widget build(BuildContext context) {
-      final provider = context.watch<UsuarioProvider>();
-  final isLoading = provider.carregando;
+    final c = context.cores;
+    final escuro = context.escuro;
+    final provider = context.watch<UsuarioProvider>();
+    final isLoading = provider.carregando;
+
+    // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+    final corTopo = escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca;
+
     return Scaffold(
+      backgroundColor: c.fundo,
       appBar: AppBar(
         title: const Text('Alterar Senha'),
-        backgroundColor:  Color.fromARGB(255, 27, 42, 107),
+        backgroundColor: corTopo,
+        foregroundColor: AppColors.branco,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -107,7 +143,7 @@ Future<void> _alterarSenha() async {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color:  Color.fromARGB(255, 27, 42, 107),
+                color: corTopo,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(30),
                   bottomRight: Radius.circular(30),
@@ -119,7 +155,7 @@ Future<void> _alterarSenha() async {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -141,7 +177,7 @@ Future<void> _alterarSenha() async {
                   Text(
                     'Mantenha sua senha sempre segura',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
                     ),
                   ),
@@ -160,7 +196,7 @@ Future<void> _alterarSenha() async {
                     // Info card
                     Card(
                       elevation: 0,
-                      color: Colors.blue.shade50,
+                      color: c.infoFundo,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -168,14 +204,15 @@ Future<void> _alterarSenha() async {
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline,
-                                color: Colors.blue.shade700),
+                            Icon(Icons.info_outline, color: c.info),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Para sua segurança, você não poderá usar senhas anteriormente utilizadas.',
                                 style: TextStyle(
-                                  color: Colors.blue.shade900,
+                                  color: escuro
+                                      ? c.info
+                                      : Colors.blue.shade900,
                                   fontSize: 13,
                                 ),
                               ),
@@ -193,20 +230,26 @@ Future<void> _alterarSenha() async {
                         padding: const EdgeInsets.all(12),
                         margin: const EdgeInsets.only(bottom: 20),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
+                          color: c.perigoFundo,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.shade200),
+                          border: Border.all(
+                            color: escuro
+                                ? c.perigo.withValues(alpha: 0.4)
+                                : Colors.red.shade200,
+                          ),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.error_outline,
-                                color:  Color.fromARGB(255, 20, 32, 82)),
+                                color: escuro
+                                    ? c.acentoTexto
+                                    : const Color.fromARGB(255, 20, 32, 82)),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 provider.erro!,
                                 style: TextStyle(
-                                  color:   Color.fromARGB(255, 200, 16, 46),
+                                  color: c.acentoTexto,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -221,7 +264,7 @@ Future<void> _alterarSenha() async {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[700]),
+                          color: c.textoSecundario),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -240,7 +283,7 @@ Future<void> _alterarSenha() async {
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: c.superficieAlt,
                       ),
                       validator: (value) => (value == null || value.isEmpty)
                           ? 'Por favor, insira a senha atual.'
@@ -251,16 +294,16 @@ Future<void> _alterarSenha() async {
 
                     Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.grey[300])),
+                        Expanded(child: Divider(color: c.borda)),
                         Padding(
                           padding:
                               const EdgeInsets.symmetric(horizontal: 16),
                           child: Text('Nova Senha',
                               style: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: c.textoSecundario,
                                   fontWeight: FontWeight.w500)),
                         ),
-                        Expanded(child: Divider(color: Colors.grey[300])),
+                        Expanded(child: Divider(color: c.borda)),
                       ],
                     ),
 
@@ -272,7 +315,7 @@ Future<void> _alterarSenha() async {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[700]),
+                          color: c.textoSecundario),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -291,7 +334,7 @@ Future<void> _alterarSenha() async {
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: c.superficieAlt,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -312,7 +355,7 @@ Future<void> _alterarSenha() async {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[700]),
+                          color: c.textoSecundario),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -331,7 +374,7 @@ Future<void> _alterarSenha() async {
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: c.superficieAlt,
                       ),
                       validator: (value) => (value == null || value.isEmpty)
                           ? 'Por favor, confirme a nova senha.'
@@ -343,10 +386,10 @@ Future<void> _alterarSenha() async {
                     // Requisitos
                     Card(
                       elevation: 0,
-                      color: Colors.grey[50],
+                      color: c.superficieAlt,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey[300]!),
+                        side: BorderSide(color: c.borda),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -357,7 +400,7 @@ Future<void> _alterarSenha() async {
                               'Requisitos da Senha:',
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey[700]),
+                                  color: c.textoSecundario),
                             ),
                             const SizedBox(height: 12),
                             _buildRequirement('Mínimo de 6 caracteres'),
@@ -376,7 +419,8 @@ Future<void> _alterarSenha() async {
                       onPressed: isLoading ? null : _alterarSenha,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor:  Color.fromARGB(255, 27, 42, 107),
+                        backgroundColor: c.marcaBotao,
+                        foregroundColor: AppColors.branco,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         elevation: 2,
@@ -402,9 +446,9 @@ Future<void> _alterarSenha() async {
                     TextButton(
                       onPressed:
                           isLoading ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancelar',
-                          style:
-                              TextStyle(fontSize: 16, color: Colors.grey)),
+                      child: Text('Cancelar',
+                          style: TextStyle(
+                              fontSize: 16, color: c.textoSecundario)),
                     ),
                   ],
                 ),
@@ -417,15 +461,17 @@ Future<void> _alterarSenha() async {
   }
 
   Widget _buildRequirement(String text) {
+    final c = context.cores;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, size: 18, color: Colors.grey[600]),
+          Icon(Icons.check_circle_outline, size: 18, color: c.textoSecundario),
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+                style: TextStyle(fontSize: 13, color: c.textoSecundario)),
           ),
         ],
       ),

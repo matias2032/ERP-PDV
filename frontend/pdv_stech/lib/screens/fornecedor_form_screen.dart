@@ -1,15 +1,27 @@
+// lib/screens/fornecedor_form_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 
-
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de snackbar/botão azul)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: botão, snackbar, ícone;
+//                  texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como borda de erro)
+//   _kBranco     → AppColors.branco (texto/ícone sobre azul/vermelho)
+//                  context.cores.superficie (fundo dos campos)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   grey.shade200 (borda dos cards)  → context.cores.borda
+//   grey.shade300 (borda dos campos) → claro: grey.shade300 (inalterado)
+//                                      escuro: colorScheme.outline do tema
 
 class FornecedorFormScreen extends StatefulWidget {
   final FornecedorModel? fornecedor;
@@ -106,13 +118,22 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
     return texto;
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(String mensagem, {bool erro = false}) {
     if (!mounted) return;
 
+    final c = context.cores;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(
+          mensagem,
+          style: const TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor: erro
+            ? AppColors.vermelhoMarca
+            : (context.escuro ? c.marcaBotao : AppColors.azulMarca),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -121,13 +142,15 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.pop(context, _houveAlteracoes);
         return false;
       },
       child: Scaffold(
-        backgroundColor: _kCinzaClaro,
+        backgroundColor: c.fundo,
         appBar: _buildAppBar(),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -157,8 +180,10 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
@@ -169,12 +194,12 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.local_shipping_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -193,21 +218,25 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
   }
 
   Widget _BannerFornecedor() {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _kAzul.withOpacity(0.08),
+        color: c.marca.withValues(alpha: context.escuro ? 0.12 : 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kAzul.withOpacity(0.2)),
+        border: Border.all(
+          color: c.marca.withValues(alpha: context.escuro ? 0.30 : 0.20),
+        ),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, color: _kAzul, size: 18),
-          SizedBox(width: 10),
+          Icon(Icons.info_outline_rounded, color: c.marca, size: 18),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'Cadastre fornecedores sem perfil. Apenas o telefone/contacto é obrigatório.',
-              style: TextStyle(fontSize: 13, color: _kAzul),
+              style: TextStyle(fontSize: 13, color: c.marca),
             ),
           ),
         ],
@@ -216,11 +245,14 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
   }
 
   Widget _buildCardIdentificacao() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -265,11 +297,14 @@ class _FornecedorFormScreenState extends State<FornecedorFormScreen> {
   }
 
   Widget _buildCardContacto() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -344,16 +379,18 @@ class _TituloSecao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Row(
       children: [
-        Icon(icon, color: _kAzul, size: 20),
+        Icon(icon, color: c.marca, size: 20),
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: _kAzul,
+            color: c.marca,
           ),
         ),
       ],
@@ -387,6 +424,13 @@ class _Campo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final salvando = context.watch<FornecedorProvider>().salvando;
+    final c = context.cores;
+
+    // Claro: mantém o cinza original. Escuro: usa o `outline` do tema
+    // (contraste 3.7:1 sobre a superfície).
+    final bordaCampo = context.escuro
+        ? Theme.of(context).colorScheme.outline
+        : Colors.grey.shade300;
 
     return TextFormField(
       controller: controller,
@@ -400,35 +444,35 @@ class _Campo extends StatelessWidget {
         labelText: label,
         hintText: hint,
         hintStyle: TextStyle(
-          color: _kCinzaTexto.withOpacity(0.6),
+          color: c.textoSecundario.withValues(alpha: 0.6),
           fontSize: 12,
         ),
-        prefixIcon: Icon(icon, color: _kAzul, size: 20),
+        prefixIcon: Icon(icon, color: c.marca, size: 20),
         filled: true,
-        fillColor: _kBranco,
+        fillColor: c.superficie,
         contentPadding: const EdgeInsets.symmetric(
           vertical: 14,
           horizontal: 12,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: bordaCampo),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: bordaCampo),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kAzul, width: 1.5),
+          borderSide: BorderSide(color: c.marca, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kVermelho),
+          borderSide: BorderSide(color: c.acentoTexto),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kVermelho, width: 1.5),
+          borderSide: BorderSide(color: c.acentoTexto, width: 1.5),
         ),
       ),
     );
@@ -456,7 +500,7 @@ class _BotaoSalvar extends StatelessWidget {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: _kBranco,
+                color: AppColors.branco,
               ),
             )
           : const Icon(Icons.save_rounded),
@@ -465,9 +509,10 @@ class _BotaoSalvar extends StatelessWidget {
         style: const TextStyle(fontSize: 16, letterSpacing: 0.5),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: _kVermelho,
-        foregroundColor: _kBranco,
-        disabledBackgroundColor: _kVermelho.withOpacity(0.5),
+        backgroundColor: AppColors.vermelhoMarca,
+        foregroundColor: AppColors.branco,
+        disabledBackgroundColor:
+            AppColors.vermelhoMarca.withValues(alpha: 0.5),
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

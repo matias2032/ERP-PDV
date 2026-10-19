@@ -5,13 +5,28 @@ import 'package:flutter/services.dart';
 import 'package:printing/printing.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import '../widgets/app_sidebar.dart';
+import '../theme/app_theme.dart';
 
-// ─── Paleta (idêntica à DetalhesProdutoScreen) ────────────────────────────────
-const _kPrimary    = Color(0xFF1B2A6B);
-const _kAccent     = Color(0xFFC8102E);
-const _kBackground = Color(0xFFF4F5F7);
-const _kSuccess    = Color(0xFF2E7D32);
-const _kWarning    = Color(0xFFE65100);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes _kPrimary, _kAccent e _kBackground e as cores
+// Colors.grey/black87/white foram substituídas pelo tema:
+//   _kPrimary    → context.cores.marca (texto/ícone/borda)
+//                  AppColors.azulMarca / azulMarcaEscuro (header)
+//   _kAccent     → context.cores.acentoTexto (ícone "remover" sobre o header)
+//   _kBackground → context.cores.fundo
+//   Colors.white (cards) → context.cores.superficie
+//   black87      → context.cores.textoPrincipal
+//   grey         → context.cores.textoSecundario / desactivado / borda
+//
+// _kSuccess e _kWarning ficam como constantes FIXAS: servem de fundo das
+// snackbars (texto branco por cima) e de cor do banner no tema claro.
+// No tema escuro o banner usa context.cores.sucesso / aviso.
+//
+// O HEADER (azul) é escuro nos dois temas, por isso o seu conteúdo (texto
+// e botões brancos) permanece fixo.
+
+const _kSuccess = Color(0xFF2E7D32);
+const _kWarning = Color(0xFFE65100);
 
 class ConfiguracoesImpressoraScreen extends StatefulWidget {
   const ConfiguracoesImpressoraScreen({super.key});
@@ -89,6 +104,8 @@ class _ConfiguracoesImpressoraScreenState
     _showSnack('Impressora padrão removida', _kWarning);
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _showSnack(String msg, Color cor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -106,13 +123,17 @@ class _ConfiguracoesImpressoraScreenState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        // A faixa da status bar mostra o fundo da tela (claro ou escuro).
+        statusBarIconBrightness:
+            context.escuro ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: _kBackground,
+        backgroundColor: c.fundo,
         drawer: const AppSidebar(currentRoute: '/configuracoes_impressora'),
         body: SafeArea(
           child: FadeTransition(
@@ -150,8 +171,11 @@ class _ConfiguracoesImpressoraScreenState
   // ── Header ────────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {
+    final c = context.cores;
+
     return Container(
-      color: _kPrimary,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      color: context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       child: Row(
         children: [
@@ -161,7 +185,7 @@ class _ConfiguracoesImpressoraScreenState
               child: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.menu_rounded, color: Colors.white, size: 18),
@@ -193,7 +217,7 @@ class _ConfiguracoesImpressoraScreenState
             _HeaderIconButton(
               icon: Icons.link_off_rounded,
               tooltip: 'Remover padrão',
-              cor: _kAccent,
+              cor: c.acentoTexto,
               onTap: _remover,
             ),
           const SizedBox(width: 8),
@@ -211,18 +235,20 @@ class _ConfiguracoesImpressoraScreenState
   // ── Loading ───────────────────────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    return const Center(
+    final c = context.cores;
+
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: 28, height: 28,
-            child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2.5),
+            child: CircularProgressIndicator(color: c.marca, strokeWidth: 2.5),
           ),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           Text(
             'A carregar impressoras…',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(fontSize: 13, color: c.textoSecundario),
           ),
         ],
       ),
@@ -232,18 +258,25 @@ class _ConfiguracoesImpressoraScreenState
   // ── Banner de estado ──────────────────────────────────────────────────────────
 
   Widget _buildBannerEstado() {
+    final c = context.cores;
+    final escuro = context.escuro;
+
+    // Claro: cores originais. Escuro: sucesso/aviso do tema.
+    final corSucesso = escuro ? c.sucesso : _kSuccess;
+    final corAviso   = escuro ? c.aviso   : _kWarning;
+
     final temImpressora = _nomeSelecionado != null;
-    final cor      = temImpressora ? _kSuccess    : _kWarning;
+    final cor      = temImpressora ? corSucesso    : corAviso;
     final icone    = temImpressora ? Icons.check_circle_rounded : Icons.warning_amber_rounded;
     final mensagem = temImpressora ? _nomeSelecionado!  : 'Nenhuma impressora padrão definida';
     final subMsg   = temImpressora ? 'Impressora padrão activa' : 'Seleccione uma impressora abaixo';
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: cor.withOpacity(0.35)),
+        side: BorderSide(color: cor.withValues(alpha: 0.35)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -252,7 +285,7 @@ class _ConfiguracoesImpressoraScreenState
             Container(
               width: 40, height: 40,
               decoration: BoxDecoration(
-                color: cor.withOpacity(0.1),
+                color: cor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(icone, color: cor, size: 20),
@@ -274,10 +307,10 @@ class _ConfiguracoesImpressoraScreenState
                   const SizedBox(height: 2),
                   Text(
                     mensagem,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: c.textoPrincipal,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -288,15 +321,15 @@ class _ConfiguracoesImpressoraScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _kSuccess.withOpacity(0.1),
+                  color: corSucesso.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: const Text(
+                child: Text(
                   'ACTIVA',
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
-                    color: _kSuccess,
+                    color: corSucesso,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -310,17 +343,19 @@ class _ConfiguracoesImpressoraScreenState
   // ── Secção lista ──────────────────────────────────────────────────────────────
 
   Widget _buildSeccaoLista() {
+    final c = context.cores;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Impressoras disponíveis',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: _kPrimary,
+                color: c.marca,
                 letterSpacing: -0.3,
               ),
             ),
@@ -328,24 +363,24 @@ class _ConfiguracoesImpressoraScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: _kPrimary.withOpacity(0.1),
+                color: c.marca.withValues(alpha: context.escuro ? 0.18 : 0.1),
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
                 '${_impressoras.length}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: _kPrimary,
+                  color: c.marca,
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 3),
-        const Text(
+        Text(
           'Toque numa impressora para defini-la como padrão',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: c.textoSecundario),
         ),
         const SizedBox(height: 14),
         if (_impressoras.isEmpty)
@@ -369,9 +404,12 @@ class _ConfiguracoesImpressoraScreenState
   }
 
   Widget _buildListaVazia() {
+    final c = context.cores;
+    final escuro = context.escuro;
+
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -380,25 +418,29 @@ class _ConfiguracoesImpressoraScreenState
             Container(
               width: 52, height: 52,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: escuro ? c.superficieAlt : Colors.grey[100],
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.print_disabled_rounded, color: Colors.grey, size: 24),
+              child: Icon(
+                Icons.print_disabled_rounded,
+                color: escuro ? c.textoSecundario : Colors.grey,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'Nenhuma impressora encontrada',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: c.textoPrincipal,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               'Verifique se a impressora está ligada\ne conectada ao computador.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+              style: TextStyle(fontSize: 12, color: c.textoSecundario, height: 1.5),
             ),
           ],
         ),
@@ -424,7 +466,12 @@ class _ImpressoraCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = isSelecionada ? _kPrimary : Colors.grey;
+    final c = context.cores;
+    final escuro = context.escuro;
+
+    final cor = isSelecionada
+        ? c.marca
+        : (escuro ? c.textoSecundario : Colors.grey);
 
     return GestureDetector(
       onTap: salvando ? null : onTap,
@@ -433,15 +480,17 @@ class _ImpressoraCard extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelecionada ? _kPrimary.withOpacity(0.06) : Colors.white,
+          color: isSelecionada
+              ? c.marca.withValues(alpha: escuro ? 0.12 : 0.06)
+              : c.superficie,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelecionada ? _kPrimary.withOpacity(0.5) : Colors.grey[200]!,
+            color: isSelecionada ? c.marca.withValues(alpha: 0.5) : c.borda,
             width: isSelecionada ? 1.6 : 1,
           ),
           boxShadow: isSelecionada
               ? [BoxShadow(
-                  color: _kPrimary.withOpacity(0.1),
+                  color: c.marca.withValues(alpha: 0.1),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 )]
@@ -452,7 +501,7 @@ class _ImpressoraCard extends StatelessWidget {
             Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
-                color: cor.withOpacity(0.1),
+                color: cor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.print_rounded, color: cor, size: 18),
@@ -467,16 +516,16 @@ class _ImpressoraCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: isSelecionada ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelecionada ? Colors.black87 : Colors.grey[600],
+                      color: isSelecionada ? c.textoPrincipal : c.textoSecundario,
                     ),
                   ),
                   if (isSelecionada) ...[
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Impressora padrão',
                       style: TextStyle(
                         fontSize: 11,
-                        color: _kPrimary,
+                        color: c.marca,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -485,14 +534,18 @@ class _ImpressoraCard extends StatelessWidget {
               ),
             ),
             if (salvando && isSelecionada)
-              const SizedBox(
+              SizedBox(
                 width: 18, height: 18,
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child: CircularProgressIndicator(color: c.marca, strokeWidth: 2),
               )
             else if (isSelecionada)
-              const Icon(Icons.check_circle_rounded, color: _kPrimary, size: 20)
+              Icon(Icons.check_circle_rounded, color: c.marca, size: 20)
             else
-              Icon(Icons.radio_button_unchecked_rounded, color: Colors.grey[300], size: 20),
+              Icon(
+                Icons.radio_button_unchecked_rounded,
+                color: escuro ? c.desactivado : Colors.grey[300],
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -501,6 +554,8 @@ class _ImpressoraCard extends StatelessWidget {
 }
 
 // ─── Botão de ícone no header ─────────────────────────────────────────────────
+// Usado apenas sobre o header (azul escuro nos dois temas): cores recebidas
+// por parâmetro.
 
 class _HeaderIconButton extends StatelessWidget {
   final IconData     icon;
@@ -524,9 +579,9 @@ class _HeaderIconButton extends StatelessWidget {
         child: Container(
           width: 40, height: 40,
           decoration: BoxDecoration(
-            color: cor.withOpacity(0.15),
+            color: cor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cor.withOpacity(0.3)),
+            border: Border.all(color: cor.withValues(alpha: 0.3)),
           ),
           child: Icon(icon, color: cor, size: 18),
         ),

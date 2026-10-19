@@ -3,13 +3,30 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
+import '../theme/app_theme.dart';
 
-// ── Paleta STech ────────────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) e as cores Colors.grey.* foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão/snackbar)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: ícone da AppBar, snackbar;
+//                  texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone/borda)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho)
+//   _kCinzaClaro → context.cores.fundo (fundo dos campos e da tela)
+//   _kCinzaTexto → context.cores.textoSecundario
+//   grey.shade200 (card/divisor)     → context.cores.borda
+//   grey.shade300 (borda dos campos) → claro: grey.shade300 (inalterado)
+//                                      escuro: colorScheme.outline do tema
+//   aviso âmbar  → claro: cores originais | escuro: context.cores.aviso(+Fundo)
+
+/// Borda dos campos/botões outlined. Claro: cinza original.
+/// Escuro: `outline` do tema (contraste 3.7:1 sobre a superfície).
+Color _bordaCampo(BuildContext context) => context.escuro
+    ? Theme.of(context).colorScheme.outline
+    : Colors.grey.shade300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -104,11 +121,14 @@ Future<void> _salvar() async {
   }
 }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _snack(String msg, {bool erro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(msg, style: const TextStyle(color: AppColors.branco)),
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : context.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -119,8 +139,10 @@ Future<void> _salvar() async {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       body: Center(
         child: SingleChildScrollView(
@@ -136,8 +158,10 @@ Future<void> _salvar() async {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -148,11 +172,11 @@ Future<void> _salvar() async {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.person_add_alt_1_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -168,11 +192,14 @@ Future<void> _salvar() async {
   }
 
   Widget _buildFormCard() {
+    final c = context.cores;
+
     return Card(
       elevation: 0,
+      color: c.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: c.borda),
       ),
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -244,8 +271,8 @@ Future<void> _salvar() async {
               const SizedBox(height: 16),
 
               _carregandoPerfis
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _kAzul))
+                  ? Center(
+                      child: CircularProgressIndicator(color: c.marca))
                   : _DropdownPerfil(
                       perfis: _perfis,
                       selecionado: _perfilSelecionado,
@@ -269,8 +296,8 @@ Future<void> _salvar() async {
                           ? null
                           : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: _kCinzaTexto,
-                        side: BorderSide(color: Colors.grey.shade300),
+                        foregroundColor: c.textoSecundario,
+                        side: BorderSide(color: _bordaCampo(context)),
                         padding:
                             const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -290,7 +317,7 @@ Future<void> _salvar() async {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  color: _kBranco, strokeWidth: 2))
+                                  color: AppColors.branco, strokeWidth: 2))
                           : const Icon(Icons.save_rounded, size: 20),
                       label: Text(
                         _salvando ? 'A guardar...' : 'Criar Usuário',
@@ -298,8 +325,8 @@ Future<void> _salvar() async {
                             fontWeight: FontWeight.w600, fontSize: 15),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kAzul,
-                        foregroundColor: _kBranco,
+                        backgroundColor: c.marcaBotao,
+                        foregroundColor: AppColors.branco,
                         padding:
                             const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -329,18 +356,20 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Row(
       children: [
-        Icon(icon, color: _kVermelho, size: 20),
+        Icon(icon, color: c.acentoTexto, size: 20),
         const SizedBox(width: 8),
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: _kAzul,
+                color: c.marca,
                 letterSpacing: 0.4)),
         const SizedBox(width: 10),
-        Expanded(child: Divider(color: Colors.grey.shade200)),
+        Expanded(child: Divider(color: c.borda)),
       ],
     );
   }
@@ -365,34 +394,42 @@ class _Campo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final borda = _bordaCampo(context);
+
     return TextFormField(
       controller: ctrl,
       keyboardType: tipo,
       validator: validator,
-      style: const TextStyle(fontSize: 14, color: _kAzul),
+      style: TextStyle(fontSize: 14, color: c.marca),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        labelStyle: const TextStyle(color: _kCinzaTexto, fontSize: 13),
-        prefixIcon: Icon(icon, color: _kAzul, size: 20),
+        hintStyle: TextStyle(
+          color: context.escuro
+              ? c.textoSecundario.withValues(alpha: 0.7)
+              : Colors.grey.shade400,
+          fontSize: 13,
+        ),
+        labelStyle: TextStyle(color: c.textoSecundario, fontSize: 13),
+        prefixIcon: Icon(icon, color: c.marca, size: 20),
         filled: true,
-        fillColor: _kCinzaClaro,
+        fillColor: c.fundo,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kAzul, width: 1.5),
+          borderSide: BorderSide(color: c.marca, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kVermelho),
+          borderSide: BorderSide(color: c.acentoTexto),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -414,27 +451,30 @@ class _DropdownPerfil extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final borda = _bordaCampo(context);
+
     return DropdownButtonFormField<_PerfilOption>(
       value: selecionado,
-      hint: const Text('Seleccione um perfil',
-          style: TextStyle(color: _kCinzaTexto, fontSize: 13)),
+      hint: Text('Seleccione um perfil',
+          style: TextStyle(color: c.textoSecundario, fontSize: 13)),
       isExpanded: true,
       decoration: InputDecoration(
         prefixIcon:
-            const Icon(Icons.shield_outlined, color: _kAzul, size: 20),
+            Icon(Icons.shield_outlined, color: c.marca, size: 20),
         filled: true,
-        fillColor: _kCinzaClaro,
+        fillColor: c.fundo,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borda),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _kAzul, width: 1.5),
+          borderSide: BorderSide(color: c.marca, width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -443,8 +483,7 @@ class _DropdownPerfil extends StatelessWidget {
           .map((p) => DropdownMenuItem(
                 value: p,
                 child: Text(p.nome,
-                    style:
-                        const TextStyle(fontSize: 14, color: _kAzul)),
+                    style: TextStyle(fontSize: 14, color: c.marca)),
               ))
           .toList(),
       onChanged: onChanged,
@@ -456,36 +495,46 @@ class _DropdownPerfil extends StatelessWidget {
 class _AvisoSenhaPadrao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
+    // Claro: cores âmbar originais. Escuro: aviso do tema (contraste > 8:1).
+    final corTexto = escuro ? c.aviso : const Color(0xFF92400E);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E1),
+        color: escuro ? c.avisoFundo : const Color(0xFFFFF8E1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFFCC02)),
+        border: Border.all(
+          color: escuro
+              ? c.aviso.withValues(alpha: 0.5)
+              : const Color(0xFFFFCC02),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_outline_rounded,
-              color: Color(0xFFF59E0B), size: 20),
+          Icon(Icons.lock_outline_rounded,
+              color: escuro ? c.aviso : const Color(0xFFF59E0B), size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Senha inicial automática',
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF92400E),
+                      color: corTexto,
                       fontSize: 13),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'A senha "12345678" será atribuída automaticamente. '
                   'O usuário será obrigado a alterá-la no primeiro login.',
                   style: TextStyle(
-                      color: Color(0xFF92400E), fontSize: 12, height: 1.5),
+                      color: corTexto, fontSize: 12, height: 1.5),
                 ),
               ],
             ),

@@ -4,14 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 import '../widgets/app_sidebar.dart';
+import '../theme/app_theme.dart';
 
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kVermelho, _kAzul, _kBranco, _kCinzaClaro,
+// _kCinzaTexto) e as cores Colors.green/red/grey.* foram substituídas pelo tema:
+//   _kAzul       → context.cores.marca (texto/ícone/borda)
+//                  context.cores.marcaBotao (fundo de botão/chip/snackbar)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar)
+//   _kVermelho   → AppColors.vermelhoMarca (fundo: snackbar, ícone da AppBar;
+//                  texto branco por cima)
+//                  context.cores.acentoTexto (vermelho como texto/ícone)
+//   _kBranco     → AppColors.branco (sobre azul/vermelho)
+//                  context.cores.superficie (barra de filtro)
+//   _kCinzaClaro → context.cores.fundo
+//   _kCinzaTexto → context.cores.textoSecundario
+//   green.*      → context.cores.sucesso / sucessoFundo
+//   red.shade50  → context.cores.perigoFundo
+//   grey.*       → context.cores.borda / desactivado
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho = Color(0xFFC8102E);
-const _kAzul = Color(0xFF1B2A6B);
-const _kBranco = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// Fundo FIXO do chip "Activos" (texto branco por cima, nos dois temas).
+const _kVerdeChip = Color(0xFF388E3C);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -42,7 +55,9 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
         titulo: '${acao[0].toUpperCase()}${acao.substring(1)} usuário',
         mensagem:
             'Deseja $acao o usuário ${usuario.nome}?',
-        corBotao: usuario.ativo ? _kVermelho : _kAzul,
+        corBotao: usuario.ativo
+            ? AppColors.vermelhoMarca
+            : ctx.cores.marcaBotao,
         labelBotao: acao[0].toUpperCase() + acao.substring(1),
       ),
     );
@@ -67,7 +82,7 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
         titulo: 'Resetar senha',
         mensagem:
             'A senha de ${usuario.nome} será redefinida para 12345678. Confirmar?',
-        corBotao: _kVermelho,
+        corBotao: AppColors.vermelhoMarca,
         labelBotao: 'Resetar',
       ),
     );
@@ -83,12 +98,18 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
     }
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(BuildContext ctx, String mensagem,
       {bool erro = false}) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(
+          mensagem,
+          style: const TextStyle(color: AppColors.branco),
+        ),
+        backgroundColor:
+            erro ? AppColors.vermelhoMarca : ctx.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -99,8 +120,10 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
        drawer: const AppSidebar(currentRoute: '/gerenciar_usuarios'),
       body: Column(
@@ -118,19 +141,21 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.people_alt_rounded,
-                color: _kBranco, size: 20),
+                color: AppColors.branco, size: 20),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -172,21 +197,22 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
 class _FiltroBarra extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<UsuarioProvider>();
     final filtro = provider.filtro;
 
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          const Icon(Icons.filter_list_rounded,
-              color: _kAzul, size: 20),
+          Icon(Icons.filter_list_rounded,
+              color: c.marca, size: 20),
           const SizedBox(width: 8),
-          const Text('Filtrar:',
+          Text('Filtrar:',
               style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: _kAzul,
+                  color: c.marca,
                   fontSize: 14)),
           const SizedBox(width: 12),
           _FiltroChip(
@@ -198,14 +224,14 @@ class _FiltroBarra extends StatelessWidget {
           _FiltroChip(
             label: 'Activos',
             selecionado: filtro == FiltroStatus.ativos,
-            cor: Colors.green.shade700,
+            cor: _kVerdeChip,
             onTap: () => provider.setFiltro(FiltroStatus.ativos),
           ),
           const SizedBox(width: 8),
           _FiltroChip(
             label: 'Inactivos',
             selecionado: filtro == FiltroStatus.inativos,
-            cor: _kVermelho,
+            cor: AppColors.vermelhoMarca,
             onTap: () => provider.setFiltro(FiltroStatus.inativos),
           ),
           const Spacer(),
@@ -213,8 +239,8 @@ class _FiltroBarra extends StatelessWidget {
           Consumer<UsuarioProvider>(
             builder: (_, p, __) => Text(
               '${p.usuariosFiltrados.length} usuário(s)',
-              style: const TextStyle(
-                  fontSize: 13, color: _kCinzaTexto),
+              style: TextStyle(
+                  fontSize: 13, color: c.textoSecundario),
             ),
           ),
         ],
@@ -226,28 +252,34 @@ class _FiltroBarra extends StatelessWidget {
 class _FiltroChip extends StatelessWidget {
   final String label;
   final bool selecionado;
-  final Color cor;
+
+  /// Fundo quando seleccionado (texto branco por cima). Se nulo, usa
+  /// `marcaBotao` do tema.
+  final Color? cor;
   final VoidCallback onTap;
 
   const _FiltroChip({
     required this.label,
     required this.selecionado,
     required this.onTap,
-    this.cor = _kAzul,
+    this.cor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final corSelecionado = cor ?? c.marcaBotao;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selecionado ? cor : _kCinzaClaro,
+          color: selecionado ? corSelecionado : c.fundo,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: selecionado ? cor : Colors.grey.shade300),
+              color: selecionado ? corSelecionado : c.borda),
         ),
         child: Text(
           label,
@@ -255,7 +287,7 @@ class _FiltroChip extends StatelessWidget {
             fontSize: 13,
             fontWeight:
                 selecionado ? FontWeight.w600 : FontWeight.w400,
-            color: selecionado ? _kBranco : _kCinzaTexto,
+            color: selecionado ? AppColors.branco : c.textoSecundario,
           ),
         ),
       ),
@@ -275,11 +307,12 @@ class _Listagem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<UsuarioProvider>();
 
     if (provider.carregando) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kAzul),
+      return Center(
+        child: CircularProgressIndicator(color: c.marca),
       );
     }
 
@@ -288,17 +321,20 @@ class _Listagem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _kVermelho, size: 48),
+            Icon(Icons.error_outline, color: c.acentoTexto, size: 48),
             const SizedBox(height: 12),
             Text(provider.erro!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: _kVermelho)),
+                style: TextStyle(color: c.acentoTexto)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => provider.carregarUsuarios(),
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
+              ),
             ),
           ],
         ),
@@ -308,14 +344,14 @@ class _Listagem extends StatelessWidget {
     final lista = provider.usuariosFiltrados;
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off_rounded, color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+            Icon(Icons.search_off_rounded, color: c.textoSecundario, size: 48),
+            const SizedBox(height: 12),
             Text('Nenhum usuário encontrado.',
-                style: TextStyle(color: _kCinzaTexto)),
+                style: TextStyle(color: c.textoSecundario)),
           ],
         ),
       );
@@ -352,18 +388,20 @@ class _CardUsuario extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final initials = _iniciais(usuario.nome);
     final ativo = usuario.ativo;
 
     return Card(
       elevation: 0,
+      color: c.superficie,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: ativo
-              ? Colors.green.shade200
-              : Colors.grey.shade300,
+              ? c.sucesso.withValues(alpha: 0.45)
+              : c.borda,
           width: 1,
         ),
       ),
@@ -380,14 +418,14 @@ class _CardUsuario extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(usuario.nome,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
-                          color: _kAzul)),
+                          color: c.marca)),
                   const SizedBox(height: 2),
                   Text(usuario.email,
-                      style: const TextStyle(
-                          fontSize: 13, color: _kCinzaTexto)),
+                      style: TextStyle(
+                          fontSize: 13, color: c.textoSecundario)),
                   const SizedBox(height: 4),
                   _BadgePerfil(perfil: usuario.nomePerfil),
                 ],
@@ -402,8 +440,14 @@ class _CardUsuario extends StatelessWidget {
                   scale: 0.85,
                   child: Switch(
                     value: ativo,
-                    activeColor: Colors.green.shade600,
-                    inactiveThumbColor: Colors.grey,
+                    // Claro: valores originais. Escuro: verde do tema.
+                    activeColor:
+                        context.escuro ? c.sucesso : Colors.green.shade600,
+                    activeTrackColor: context.escuro
+                        ? c.sucesso.withValues(alpha: 0.40)
+                        : null,
+                    inactiveThumbColor:
+                        context.escuro ? c.textoSecundario : Colors.grey,
                     onChanged: (_) => onToggle(usuario),
                   ),
                 ),
@@ -415,7 +459,7 @@ class _CardUsuario extends StatelessWidget {
               message: 'Resetar senha',
               child: IconButton(
                 icon: const Icon(Icons.lock_reset_rounded),
-                color: _kVermelho,
+                color: c.acentoTexto,
                 iconSize: 22,
                 onPressed: () => onReset(usuario),
               ),
@@ -425,7 +469,7 @@ class _CardUsuario extends StatelessWidget {
               message: 'Ver detalhes',
               child: IconButton(
                 icon: const Icon(Icons.chevron_right_rounded),
-                color: _kAzul,
+                color: c.marca,
                 iconSize: 24,
                 onPressed: () => Navigator.of(context)
                     .pushNamed('/usuarios/detalhes', arguments: usuario),
@@ -457,15 +501,18 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Stack(
       children: [
         CircleAvatar(
           radius: 26,
-          backgroundColor: _kAzul.withOpacity(0.12),
+          backgroundColor:
+              c.marca.withValues(alpha: context.escuro ? 0.18 : 0.12),
           child: Text(initials,
-              style: const TextStyle(
+              style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: _kAzul,
+                  color: c.marca,
                   fontSize: 15)),
         ),
         Positioned(
@@ -475,9 +522,10 @@ class _Avatar extends StatelessWidget {
             width: 13,
             height: 13,
             decoration: BoxDecoration(
-              color: ativo ? Colors.green.shade500 : Colors.grey.shade400,
+              color: ativo ? c.sucesso : c.desactivado,
               shape: BoxShape.circle,
-              border: Border.all(color: _kBranco, width: 2),
+              // Mesma cor do card, para o "recorte" do indicador.
+              border: Border.all(color: c.superficie, width: 2),
             ),
           ),
         ),
@@ -492,22 +540,24 @@ class _BadgeStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: ativo
-            ? Colors.green.shade50
-            : Colors.red.shade50,
+        color: ativo ? c.sucessoFundo : c.perigoFundo,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: ativo ? Colors.green.shade300 : Colors.red.shade200),
+            color: ativo
+                ? c.sucesso.withValues(alpha: 0.45)
+                : c.perigo.withValues(alpha: 0.35)),
       ),
       child: Text(
         ativo ? 'Activo' : 'Inactivo',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: ativo ? Colors.green.shade700 : _kVermelho,
+          color: ativo ? c.sucesso : c.acentoTexto,
         ),
       ),
     );
@@ -520,15 +570,17 @@ class _BadgePerfil extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _kAzul.withOpacity(0.08),
+        color: c.marca.withValues(alpha: context.escuro ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(perfil,
-          style: const TextStyle(
-              fontSize: 11, color: _kAzul, fontWeight: FontWeight.w500)),
+          style: TextStyle(
+              fontSize: 11, color: c.marca, fontWeight: FontWeight.w500)),
     );
   }
 }
@@ -612,24 +664,26 @@ class _DialogoConfirmacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: Text(titulo,
-          style: const TextStyle(
-              fontWeight: FontWeight.w700, color: _kAzul, fontSize: 17)),
+          style: TextStyle(
+              fontWeight: FontWeight.w700, color: c.marca, fontSize: 17)),
       content: Text(mensagem,
-          style: const TextStyle(fontSize: 14, color: _kCinzaTexto)),
+          style: TextStyle(fontSize: 14, color: c.textoSecundario)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar',
-              style: TextStyle(color: _kCinzaTexto)),
+          child: Text('Cancelar',
+              style: TextStyle(color: c.textoSecundario)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: ElevatedButton.styleFrom(
             backgroundColor: corBotao,
-            foregroundColor: _kBranco,
+            foregroundColor: AppColors.branco,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8)),
           ),
@@ -639,4 +693,3 @@ class _DialogoConfirmacao extends StatelessWidget {
     );
   }
 }
-

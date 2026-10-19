@@ -2,13 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
 import '/widgets/app_sidebar.dart';
+import '/theme/app_theme.dart';
 
-// ── Cores STech Engenharia ────────────────────────────────────────────────────
-const _kVermelho   = Color(0xFFC8102E);
-const _kAzul       = Color(0xFF1B2A6B);
-const _kBranco     = Colors.white;
-const _kCinzaClaro = Color(0xFFF4F5F7);
-const _kCinzaTexto = Color(0xFF6B7280);
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes foram substituídas pelo tema:
+//   _kAzul        → context.cores.marca (texto/ícone/borda)
+//                   context.cores.marcaBotao (fundo de botão / snackbar de sucesso)
+//                   AppColors.azulMarca / azulMarcaEscuro (AppBar, cabeçalho da tabela)
+//   _kVermelho    → AppColors.vermelhoMarca (FUNDO: ícone da AppBar, botão do diálogo,
+//                   snackbar de erro)
+//                   context.cores.acentoTexto (vermelho como texto/ícone)
+//                   context.cores.perigo (mensagem de erro de carregamento)
+//   _kBranco      → context.cores.superficie (fundo) / AppColors.branco (sobre marca)
+//   _kCinzaClaro  → context.cores.fundo
+//   _kCinzaTexto  → context.cores.textoSecundario
+//   0xFFF0F2FA    → context.cores.linhaAlternada
+//   0xFFE8EAF0    → context.cores.borda
+//
+// NOTA: ajusta o import do tema ao caminho real (mesmo estilo do import do
+// app_sidebar acima).
 
 class FornecedorListScreen extends StatefulWidget {
   const FornecedorListScreen({super.key});
@@ -79,7 +91,7 @@ class _FornecedorListScreenState extends State<FornecedorListScreen> {
         titulo: 'Remover fornecedor',
         mensagem:
             'Deseja remover o fornecedor "$nome"? Esta acção não pode ser desfeita.',
-        corBotao: _kVermelho,
+        corBotao: AppColors.vermelhoMarca,
         labelBotao: 'Remover',
       ),
     );
@@ -110,11 +122,13 @@ class _FornecedorListScreenState extends State<FornecedorListScreen> {
     }
   }
 
+  /// Fundo colorido FIXO + texto branco explícito: sem isso, no tema escuro
+  /// o texto herdaria `textoPrincipal` (claro) e perderia contraste.
   void _mostrarSnack(BuildContext ctx, String mensagem, {bool erro = false}) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(mensagem),
-        backgroundColor: erro ? _kVermelho : _kAzul,
+        content: Text(mensagem, style: const TextStyle(color: Colors.white)),
+        backgroundColor: erro ? AppColors.vermelhoMarca : ctx.cores.marcaBotao,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -131,8 +145,10 @@ class _FornecedorListScreenState extends State<FornecedorListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Scaffold(
-      backgroundColor: _kCinzaClaro,
+      backgroundColor: c.fundo,
       appBar: _buildAppBar(),
       drawer: const AppSidebar(currentRoute: '/gerenciar_fornecedores'),
       body: Column(
@@ -156,20 +172,22 @@ class _FornecedorListScreenState extends State<FornecedorListScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _kAzul,
-      foregroundColor: _kBranco,
+      // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+      backgroundColor:
+          context.escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca,
+      foregroundColor: AppColors.branco,
       elevation: 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: _kVermelho,
+              color: AppColors.vermelhoMarca,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.local_shipping_rounded,
-              color: _kBranco,
+              color: AppColors.branco,
               size: 20,
             ),
           ),
@@ -219,8 +237,10 @@ class _BarraPesquisa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return Container(
-      color: _kBranco,
+      color: c.superficie,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
@@ -230,23 +250,23 @@ class _BarraPesquisa extends StatelessWidget {
               onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: 'Pesquisar fornecedor por nome, NUIT ou contacto...',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 13,
-                  color: _kCinzaTexto,
+                  color: c.textoSecundario,
                 ),
-                prefixIcon: const Icon(Icons.search_rounded, color: _kAzul),
+                prefixIcon: Icon(Icons.search_rounded, color: c.marca),
                 suffixIcon: controller.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: _kCinzaTexto,
+                          color: c.textoSecundario,
                           size: 18,
                         ),
                         onPressed: onLimpar,
                       )
                     : null,
                 filled: true,
-                fillColor: _kCinzaClaro,
+                fillColor: c.fundo,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -259,7 +279,7 @@ class _BarraPesquisa extends StatelessWidget {
           Consumer<FornecedorProvider>(
             builder: (_, p, __) => Text(
               '${p.fornecedores.length} fornecedor(es)',
-              style: const TextStyle(fontSize: 13, color: _kCinzaTexto),
+              style: TextStyle(fontSize: 13, color: c.textoSecundario),
             ),
           ),
         ],
@@ -283,11 +303,12 @@ class _Listagem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
     final provider = context.watch<FornecedorProvider>();
 
     if (provider.carregando) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kAzul),
+      return Center(
+        child: CircularProgressIndicator(color: c.marca),
       );
     }
 
@@ -296,19 +317,22 @@ class _Listagem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _kVermelho, size: 48),
+            Icon(Icons.error_outline, color: c.perigo, size: 48),
             const SizedBox(height: 12),
             Text(
               provider.erro!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kVermelho),
+              style: TextStyle(color: c.perigo),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: provider.carregarFornecedores,
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAzul),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.marcaBotao,
+                foregroundColor: AppColors.branco,
+              ),
             ),
           ],
         ),
@@ -318,15 +342,16 @@ class _Listagem extends StatelessWidget {
     final lista = provider.fornecedores;
 
     if (lista.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.local_shipping_outlined, color: _kCinzaTexto, size: 48),
-            SizedBox(height: 12),
+            Icon(Icons.local_shipping_outlined,
+                color: c.textoSecundario, size: 48),
+            const SizedBox(height: 12),
             Text(
               'Nenhum fornecedor encontrado.',
-              style: TextStyle(color: _kCinzaTexto),
+              style: TextStyle(color: c.textoSecundario),
             ),
           ],
         ),
@@ -338,9 +363,12 @@ class _Listagem extends StatelessWidget {
         Container(
           margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: const BoxDecoration(
-            color: _kAzul,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+          decoration: BoxDecoration(
+            color: context.escuro
+                ? AppColors.azulMarcaEscuro
+                : AppColors.azulMarca,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: const Row(
             children: [
@@ -451,11 +479,17 @@ class _LinhaFornecedor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+    final escuro = context.escuro;
+
+    // Fundo translúcido dos botões de acção: mais forte no tema escuro.
+    final alphaAccao = escuro ? 0.15 : 0.08;
+
     return Container(
       decoration: BoxDecoration(
-        color: isAlternate ? const Color(0xFFF0F2FA) : Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE8EAF0)),
+        color: isAlternate ? c.linhaAlternada : c.superficie,
+        border: Border(
+          bottom: BorderSide(color: c.borda),
         ),
       ),
       child: Padding(
@@ -464,12 +498,12 @@ class _LinhaFornecedor extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: _kAzul.withOpacity(0.12),
+              backgroundColor: c.marca.withValues(alpha: escuro ? 0.18 : 0.12),
               child: Text(
                 _iniciais,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: _kAzul,
+                  color: c.marca,
                   fontSize: 12,
                 ),
               ),
@@ -482,10 +516,10 @@ class _LinhaFornecedor extends StatelessWidget {
                 _nome,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _kAzul,
+                  color: c.marca,
                 ),
               ),
             ),
@@ -494,7 +528,7 @@ class _LinhaFornecedor extends StatelessWidget {
               flex: 2,
               child: Text(
                 fornecedor.nuit?.isNotEmpty == true ? fornecedor.nuit! : '—',
-                style: const TextStyle(fontSize: 12, color: _kCinzaTexto),
+                style: TextStyle(fontSize: 12, color: c.textoSecundario),
               ),
             ),
 
@@ -502,10 +536,10 @@ class _LinhaFornecedor extends StatelessWidget {
               flex: 2,
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.phone_outlined,
                     size: 13,
-                    color: _kCinzaTexto,
+                    color: c.textoSecundario,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
@@ -513,9 +547,9 @@ class _LinhaFornecedor extends StatelessWidget {
                       fornecedor.contacto,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: _kCinzaTexto,
+                        color: c.textoSecundario,
                       ),
                     ),
                   ),
@@ -531,10 +565,10 @@ class _LinhaFornecedor extends StatelessWidget {
                   if (fornecedor.email?.isNotEmpty == true)
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.email_outlined,
                           size: 12,
-                          color: _kCinzaTexto,
+                          color: c.textoSecundario,
                         ),
                         const SizedBox(width: 3),
                         Flexible(
@@ -542,9 +576,9 @@ class _LinhaFornecedor extends StatelessWidget {
                             fornecedor.email!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: _kCinzaTexto,
+                              color: c.textoSecundario,
                             ),
                           ),
                         ),
@@ -553,10 +587,10 @@ class _LinhaFornecedor extends StatelessWidget {
                   if (fornecedor.morada?.isNotEmpty == true)
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 12,
-                          color: _kCinzaTexto,
+                          color: c.textoSecundario,
                         ),
                         const SizedBox(width: 3),
                         Flexible(
@@ -564,9 +598,9 @@ class _LinhaFornecedor extends StatelessWidget {
                             fornecedor.morada!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: _kCinzaTexto,
+                              color: c.textoSecundario,
                             ),
                           ),
                         ),
@@ -574,9 +608,9 @@ class _LinhaFornecedor extends StatelessWidget {
                     ),
                   if ((fornecedor.email == null || fornecedor.email!.isEmpty) &&
                       (fornecedor.morada == null || fornecedor.morada!.isEmpty))
-                    const Text(
+                    Text(
                       '—',
-                      style: TextStyle(fontSize: 12, color: _kCinzaTexto),
+                      style: TextStyle(fontSize: 12, color: c.textoSecundario),
                     ),
                 ],
               ),
@@ -595,13 +629,13 @@ class _LinhaFornecedor extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: _kAzul.withOpacity(0.08),
+                          color: c.marca.withValues(alpha: alphaAccao),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.edit_rounded,
                           size: 16,
-                          color: _kAzul,
+                          color: c.marca,
                         ),
                       ),
                     ),
@@ -615,13 +649,13 @@ class _LinhaFornecedor extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: _kVermelho.withOpacity(0.08),
+                          color: c.acentoTexto.withValues(alpha: alphaAccao),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.delete_outline_rounded,
                           size: 16,
-                          color: _kVermelho,
+                          color: c.acentoTexto,
                         ),
                       ),
                     ),
@@ -655,33 +689,35 @@ class _DialogoConfirmacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.cores;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: Text(
         titulo,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w700,
-          color: _kAzul,
+          color: c.marca,
           fontSize: 17,
         ),
       ),
       content: Text(
         mensagem,
-        style: const TextStyle(fontSize: 14, color: _kCinzaTexto),
+        style: TextStyle(fontSize: 14, color: c.textoSecundario),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: _kCinzaTexto),
+            style: TextStyle(color: c.textoSecundario),
           ),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: ElevatedButton.styleFrom(
             backgroundColor: corBotao,
-            foregroundColor: _kBranco,
+            foregroundColor: AppColors.branco,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),

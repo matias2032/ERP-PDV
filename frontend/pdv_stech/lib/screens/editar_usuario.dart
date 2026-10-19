@@ -1,11 +1,27 @@
+// lib/screens/editar_usuario_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:api_compartilhado/api_compartilhado.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 
-const _kPrimary    = Color.fromARGB(255, 27, 42, 107);
-const _kAccent     = Color.fromARGB(255, 200, 16, 46);
-const _kBackground = Color(0xFFF4F5F7);
-const _kCardBg     = Colors.white;
+// ─── Cores ───────────────────────────────────────────────────────────────────
+// As antigas constantes (_kPrimary, _kAccent, _kBackground, _kCardBg) e as
+// cores Colors.grey/green/red/black87 foram substituídas pelo tema:
+//   _kPrimary    → context.cores.marca (texto/ícone)
+//                  context.cores.marcaBotao (fundo de botão)
+//                  AppColors.azulMarca / azulMarcaEscuro (AppBar e header)
+//   _kAccent     → AppColors.vermelhoMarca (fundo de snackbar de erro)
+//                  (não era usada no ficheiro original)
+//   _kBackground → context.cores.fundo
+//   _kCardBg     → context.cores.superficie
+//   grey[600]    → context.cores.textoSecundario
+//   grey[100]    → claro: grey[100] (inalterado) | escuro: context.cores.fundo
+//   black87      → context.cores.textoPrincipal
+//   green / red  → context.cores.sucesso / perigo
+//
+// O HEADER (azul) é escuro nos dois temas, por isso o seu conteúdo (texto
+// branco, avatar, badge) permanece fixo.
 
 class EditarUsuarioScreen extends StatefulWidget {
   const EditarUsuarioScreen({super.key});
@@ -71,10 +87,15 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
 
     final provider = context.read<UsuarioProvider>();
     if (provider.erro == null) {
+      // Fundo colorido FIXO + texto branco explícito: sem isso, no tema
+      // escuro o texto herdaria `textoPrincipal` (claro) e perderia contraste.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Dados atualizados com sucesso! Você será deslogado.'),
-          backgroundColor: Colors.green,
+          content: Text(
+            'Dados atualizados com sucesso! Você será deslogado.',
+            style: TextStyle(color: AppColors.branco),
+          ),
+          backgroundColor: Color(0xFF2E7D32),
           duration: Duration(seconds: 2),
         ),
       );
@@ -86,8 +107,11 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao atualizar dados: ${provider.erro}'),
-          backgroundColor: Colors.red,
+          content: Text(
+            'Erro ao atualizar dados: ${provider.erro}',
+            style: const TextStyle(color: AppColors.branco),
+          ),
+          backgroundColor: AppColors.vermelhoMarca,
         ),
       );
     }
@@ -95,6 +119,8 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c         = context.cores;
+    final escuro    = context.escuro;
     final provider  = context.watch<UsuarioProvider>();
     final sessaoId  = SessaoService.instance.usuarioAtual?.id;
     final usuario   = provider.usuarios
@@ -109,23 +135,37 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
     final isLoading = provider.carregando;
     final isSaving  = provider.carregando;
 
+    // Mesmo critério da AppBar do tema escuro (azulMarcaEscuro).
+    final corTopo = escuro ? AppColors.azulMarcaEscuro : AppColors.azulMarca;
+
+    // Fundo dos campos desabilitados / somente leitura.
+    final fundoSomenteLeitura = escuro ? c.fundo : Colors.grey[100];
+
+    // Texto dos campos desabilitados: no escuro, o padrão (onSurface a 38%)
+    // fica pouco legível; usa textoSecundario.
+    final estiloDesabilitado = (!_isModoEdicao && escuro)
+        ? TextStyle(color: c.textoSecundario)
+        : null;
+
     return Scaffold(
+      backgroundColor: c.fundo,
       appBar: AppBar(
         title: const Text('Meus Dados'),
-        backgroundColor: _kPrimary,
+        backgroundColor: corTopo,
+        foregroundColor: AppColors.branco,
         elevation: 0,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: c.marca))
           : SingleChildScrollView(
               child: Column(
                 children: [
                   // ── Header com avatar ──────────────────────────────
                   Container(
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: _kPrimary,
-                      borderRadius: BorderRadius.only(
+                    decoration: BoxDecoration(
+                      color: corTopo,
+                      borderRadius: const BorderRadius.only(
                         bottomLeft:  Radius.circular(30),
                         bottomRight: Radius.circular(30),
                       ),
@@ -137,11 +177,11 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: escuro ? c.superficieAlt : AppColors.branco,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color:      Colors.black.withOpacity(0.2),
+                                color:      Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 10,
                                 offset:     const Offset(0, 5),
                               ),
@@ -156,7 +196,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                               style: const TextStyle(
                                 fontSize:   40,
                                 fontWeight: FontWeight.bold,
-                                color:      _kPrimary,
+                                color:      AppColors.azulMarca,
                               ),
                             ),
                           ),
@@ -165,7 +205,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                         Text(
                           '${usuario?.nome ?? ''} ${usuario?.apelido ?? ''}',
                           style: const TextStyle(
-                            color:      Colors.white,
+                            color:      AppColors.branco,
                             fontSize:   24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -175,13 +215,13 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color:        Colors.white.withOpacity(0.2),
+                            color:        AppColors.branco.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             usuario?.nomePerfil ?? 'Usuário',
                             style: const TextStyle(
-                              color:      Colors.white,
+                              color:      AppColors.branco,
                               fontSize:   14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -228,6 +268,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                               TextFormField(
                                 controller: _emailController,
                                 enabled:    _isModoEdicao,
+                                style:      estiloDesabilitado,
                                 decoration: InputDecoration(
                                   labelText:  'Email',
                                   prefixIcon: const Icon(Icons.email),
@@ -236,8 +277,8 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                   ),
                                   filled:    true,
                                   fillColor: _isModoEdicao
-                                      ? Colors.white
-                                      : Colors.grey[100],
+                                      ? c.superficie
+                                      : fundoSomenteLeitura,
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
@@ -254,6 +295,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                               TextFormField(
                                 controller: _telefoneController,
                                 enabled:    _isModoEdicao,
+                                style:      estiloDesabilitado,
                                 decoration: InputDecoration(
                                   labelText:  'Telefone',
                                   prefixIcon: const Icon(Icons.phone),
@@ -262,8 +304,8 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                   ),
                                   filled:    true,
                                   fillColor: _isModoEdicao
-                                      ? Colors.white
-                                      : Colors.grey[100],
+                                      ? c.superficie
+                                      : fundoSomenteLeitura,
                                 ),
                                 keyboardType: TextInputType.phone,
                               ),
@@ -288,8 +330,8 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                 value:      (usuario?.ativo ?? false) ? 'Ativo' : 'Inativo',
                                 icon:       Icons.check_circle,
                                 valueColor: (usuario?.ativo ?? false)
-                                    ? Colors.green
-                                    : Colors.red,
+                                    ? c.sucesso
+                                    : c.perigo,
                               ),
                             ],
                           ),
@@ -313,16 +355,16 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                                   usuario?.telefone ?? '';
                                             });
                                           },
-                                    icon:  const Icon(Icons.close,
-                                        color: Colors.grey),
-                                    label: const Text('Cancelar',
+                                    icon:  Icon(Icons.close,
+                                        color: c.textoSecundario),
+                                    label: Text('Cancelar',
                                         style: TextStyle(
                                             fontSize: 16,
-                                            color:    Colors.grey)),
+                                            color:    c.textoSecundario)),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 16),
-                                      side:  const BorderSide(color: Colors.grey),
+                                      side:  BorderSide(color: c.textoSecundario),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -341,23 +383,23 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                             width:  20,
                                             child:  CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color:       Colors.white,
+                                              color:       AppColors.branco,
                                             ),
                                           )
                                         : const Icon(Icons.save,
-                                            color: Colors.white),
+                                            color: AppColors.branco),
                                     label: Text(
                                       isSaving ? 'Salvando...' : 'Salvar Alterações',
                                       style: const TextStyle(
                                         fontSize:   16,
                                         fontWeight: FontWeight.bold,
-                                        color:      Colors.white,
+                                        color:      AppColors.branco,
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 16),
-                                      backgroundColor: _kPrimary,
+                                      backgroundColor: c.marcaBotao,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -369,11 +411,11 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                           ] else ...[
                             Container(
                               decoration: BoxDecoration(
-                                color:        _kPrimary,
+                                color:        c.marcaBotao,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color:      _kPrimary.withOpacity(0.3),
+                                    color:      c.marcaBotao.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset:     const Offset(0, 4),
                                   ),
@@ -383,13 +425,13 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                                 onPressed: () =>
                                     setState(() => _isModoEdicao = true),
                                 icon: const Icon(Icons.edit,
-                                    color: Colors.white, size: 24),
+                                    color: AppColors.branco, size: 24),
                                 label: const Text(
                                   'Editar Meus Dados',
                                   style: TextStyle(
                                     fontSize:      18,
                                     fontWeight:    FontWeight.bold,
-                                    color:         Colors.white,
+                                    color:         AppColors.branco,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -422,9 +464,18 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
     required IconData     icon,
     required List<Widget> children,
   }) {
+    final c = context.cores;
+
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: c.superficie,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        // No escuro a sombra não é visível: a borda separa o card do fundo.
+        side: BorderSide(
+          color: context.escuro ? c.borda : Colors.transparent,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -432,13 +483,13 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: _kPrimary, size: 24),
+                Icon(icon, color: c.marca, size: 24),
                 const SizedBox(width: 12),
                 Text(title,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize:   18,
                         fontWeight: FontWeight.bold,
-                        color:      _kPrimary)),
+                        color:      c.marca)),
               ],
             ),
             const SizedBox(height: 20),
@@ -455,17 +506,19 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
     required IconData icon,
     Color? valueColor,
   }) {
+    final c = context.cores;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: Colors.grey[600]),
+            Icon(icon, size: 18, color: c.textoSecundario),
             const SizedBox(width: 8),
             Text(label,
                 style: TextStyle(
                     fontSize:   14,
-                    color:      Colors.grey[600],
+                    color:      c.textoSecundario,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -474,13 +527,13 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
           width:   double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color:        Colors.grey[100],
+            color:        context.escuro ? c.fundo : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(value,
               style: TextStyle(
                   fontSize:   16,
-                  color:      valueColor ?? Colors.black87,
+                  color:      valueColor ?? c.textoPrincipal,
                   fontWeight: FontWeight.w500)),
         ),
       ],
