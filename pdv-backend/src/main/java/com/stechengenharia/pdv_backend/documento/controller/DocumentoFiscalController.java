@@ -169,5 +169,17 @@ public ResponseEntity<String> resetVd(@RequestParam long ultimoNumero) {
     int apagados = jdbcTemplate.update("DELETE FROM documento_fiscal WHERE id_tipo_doc = 5");
     jdbcTemplate.queryForObject("SELECT setval('seq_vd', ?, true)", Long.class, ultimoNumero);
     return ResponseEntity.ok("VDs apagadas: " + apagados + " | seq_vd = " + ultimoNumero);
+
+}
+
+@PatchMapping("/dev/{id}/data-emissao")
+@Transactional
+public ResponseEntity<String> alterarDataEmissao(
+        @PathVariable Integer id,
+        @RequestParam String data) {   // ex: 2026-08-07T14:15:58.929802+02:00
+    int n = jdbcTemplate.update(
+        "UPDATE documento_fiscal SET emitido_em = ?::timestamptz, updated_at = now(), version = version + 1 WHERE id_documento = ?",
+        data, id);
+    return ResponseEntity.ok("Linhas alteradas: " + n);
 }
 }
