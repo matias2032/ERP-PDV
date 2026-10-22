@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -27,6 +29,7 @@ import java.util.List;
 public class DocumentoFiscalController {
 
     private final DocumentoFiscalService service;
+        private final JdbcTemplate jdbcTemplate;
 
     // ── Tipos de documento ────────────────────────────────────────────────
 
@@ -145,5 +148,26 @@ public ResponseEntity<NotaRetificativaResponse> emitirNotaRetificativa(
     return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(service.emitirNotaRetificativa(id, request));
+}
+
+@PostMapping("/dev/reset-seq-vd")
+public ResponseEntity<String> resetSeqVd(@RequestParam long valor) {
+    jdbcTemplate.queryForObject("SELECT setval('seq_vd', ?, true)", Long.class, valor);
+    return ResponseEntity.ok("seq_vd = " + valor);
+}
+
+@PostMapping("/dev/reset-vd")
+@Transactional
+public ResponseEntity<String> resetVd(@RequestParam long ultimoNumero) {
+    jdbcTemplate.update("""
+        DELETE FROM documento_fiscal_relacao
+         WHERE id_documento_origem IN (SELECT id_documento FROM documento_fiscal WHERE id_tipo_doc = 5)
+            OR id_documento_relacionado IN (SELECT id_documento FROM documento_fiscal WHERE id_tipo_doc = 5)""");
+    jdbcTemplate.update("""
+        DELETE FROM documento_fiscal_pedido
+         WHERE id_documento IN (SELECT id_documento FROM documento_fiscal WHERE id_tipo_doc = 5)""");
+    int apagados = jdbcTemplate.update("DELETE FROM documento_fiscal WHERE id_tipo_doc = 5");
+    jdbcTemplate.queryForObject("SELECT setval('seq_vd', ?, true)", Long.class, ultimoNumero);
+    return ResponseEntity.ok("VDs apagadas: " + apagados + " | seq_vd = " + ultimoNumero);
 }
 }

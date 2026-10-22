@@ -97,6 +97,8 @@ public record EmitirNotaRetificativaRequest(
             // Vazio/nulo para ERRO_PREENCHIMENTO (anulação total).
             List<ItemRetificadoRequest> itensDevolvidos
     ) {}
+
+    
     
 }
 
